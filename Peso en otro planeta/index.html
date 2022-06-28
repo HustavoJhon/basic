@@ -7,9 +7,33 @@
     <title>Peso en otros planetas</title>
 </head>
 <body>
-    <h1>TU peso en otro planeta</h1>
-    <p>En la tierra pesas distinto que en Marte o Jupiter</p>
+    <div align="center">
+        <h1>TU peso en otro planeta</h1>
+        <p>En la tierra pesas distinto que en Marte o Jupiter</p>
+    </div>
     <!-- JAVASCRIPT -->
-    <script src="app.js"></script>
+    <!-- <script src="app.js"></script> -->
+    <script>
+        // mi peso
+        var usuario = parseInt(prompt("Cual es tu peso?"));
+        var planeta = parseInt(prompt("Elige tu planeta\n1 =► marte \n2 =► jupiter"));
+
+        // gravedad en los diferentes planetas
+        var g_tierra = 9.8;
+        var g_marte = 3.7;
+        var g_jupiter = 24.8;
+
+        var perso_final;
+
+        // condicional
+        if(planeta == 1){
+            perso_final = parseInt(user * g_marte / g_tierra);
+        } else if (planeta == 2 ){
+            perso_final = parseInt(user * g_jupiter / g_tierra);
+        } else{
+            alert("tu peso es ridiculo")
+        }
+        document.write("Tu Peso en Marte es <strong>" + perso_final +" kilos </strong>")
+    </script>
 </body>
 </html>
