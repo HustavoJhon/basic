@@ -10,6 +10,8 @@ var g_jupiter = 24.8;
 // condicional
 if(planeta == 1){
     peso_marte = parseInt(user * g_marte / g_tierra);
+} else {
+    peso_
 }
 document.write(`Tu peso en Marte es <strong>${peso_marte} Kilos </strong>`);
 
