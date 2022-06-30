@@ -23,7 +23,7 @@ O podemos primero declarar la variable y más adelante, en otra línea, asignarl
 *Los nombres de las variables siempre han de comenzar por una letra, el símbolo <code>$ o _ </code>, nunca pueden comenzar por números u otros caracteres especiales. JavaScript también distingue entre mayúsculas o minúsculas, por tanto no es lo mismo <code> miDato </code> que <code>MiDato</code> o <code>miDato</code> , para JavaScript son nombres diferentes y las tratará de manera diferente.*
 
 ---
-## ___Tipos___
+## ___Tipos de Datos___
 > JavaScript tiene 4 tipos primitivos de datos para almacenar en variables. Estos son:
 * number <br>
 * boolean <br>
@@ -55,3 +55,30 @@ Por ejemplo:
     var dato = undefined;
 ```
 _Otro tipo de almacenamiento de datos que tiene JavaScript son los Objetos. En JavaScript todo es un objeto, hasta las funciones. Todo *hereda* de la clase Object . Se pueden definir como una estructura donde se agregan valores. Dentro de las clases que heredan de <code>Object</code> tenemos<code> Array</code> ,<code>Date</code> , etc... que veremos más adelante._
+
+---
+## Resumen
+
+**Variables**
+
+        * Let (alcanse local)
+        * Var (alcanse global)
+        * Const (constante)
+
+**Tipos de Datos** 
+
+        * String
+        * Number
+        * Boolean
+
+**Casos especiales**
+
+        * Undefined (no definido)
+        * Null (valor nulo o vacio)
+        * Nan (not a number)
+
+**Scope**
+> el escope es un alcance de las variable por ejemplo: dentro de una funcion solo va a tener el alcance dentro de la funcion y afuera no
+
+**Hoisting**
+> ejecuta funciones sin antes tener un valor
