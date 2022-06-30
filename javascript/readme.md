@@ -58,3 +58,38 @@ JavaScript fue diseñado para añadir efectos y animaciones a los sitios web, pe
 
 ### ___Node.js___
 En 2009, Ryan Dahl creó Node.js. Node es un entorno de ejecución para JavaScript en el servidor a partir del motor V8 de renderizado de JavaScript que utiliza el navegador Chrome de Google. Node facilita la creación de aplicaciones de servidor altamente escalables. Hoy en día es muy popular para el desarrollo de Microservicios, APIs, aplicaciones web Full-stack, isomórficas, etc... Su comunidad es muy grande, y su sistema de paquetes y librerias NPM, Node Package Manager, (Aunque hoy en día ya no solo engloba paquetes de Node, tambien para JavaScript del lado cliente) ha superado los 150.000 módulos, conviertiéndolo en el más grande de todos por delante de Java, Ruby, PHP, etc...
+
+
+## Indice:
+
+****
+
+[Website](https://javascript.espaciolatino.com/index.htm)
+
+[other website](https://uniwebsidad.com/libros/javascript)
+
+**Programas**
+
+*Que son?*
+> Aqui vamos a hablar un poco sobre que son los programas y lenguajes informaticos. Ya sabes: empezamos desde cero.
+
+* Introduccion
+* Que es un programa?
+* Sobre JavaScript
+* Algunos conceptos
+* La ejecucion de script
+* Buenas practicas
+
+**Javascript**
+
+*Como es el lenguaje?*
+> Si ya sabes que son los programas ahora toca ver el Javascript, el lenguje que vas a usar para construirlos.
+
+* Gramatica
+* Datos basicos
+* Las variables
+* Operadores
+* Clases y objetos
+* Las funciones
+* Condiciones y bucles
+* Objetos en detalle
