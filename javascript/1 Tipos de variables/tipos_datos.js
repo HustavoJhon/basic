@@ -1,18 +1,32 @@
 //! TIPOS DE DATOS 
+/**
+ * NUMBER
+ * STRING
+ * BOOLEAN
+ * UNDEFINED
+ * NULL
+ * SYMBOL
+ */
 // con typeof podemos saber de que tipo es el dato
 
-// number - para  todos los tipos de numeros enteros y decimales
+// NUMBER - para  todos los tipos de numeros enteros y decimales
 console.log(typeof 40);
 console.log(typeof 3.2);
 
-// string - cadena de texto
+// STRING - cadena de texto
 console.log(typeof "hola");
 console.log(typeof 'hustavo');
 
-// Boolean - false, true
+// BOOLEAN - false, true
 console.log(typeof true);
 console.log(typeof false);
 
+// UNDEFINED - no definido
+console.log(typeof undefined);
+
+// NULL - nulo o vacio
+// valores que no existen o nulo
+console.log(typeof null);
 
 //! TIPOS DE DATOS - COLECCION DE DATOS
 /** 
@@ -38,12 +52,6 @@ console.log({
 });
 
 
-//? Nulo null
-// valores que no existen o nulo
-console.log(typeof null);
-
-//? Undifine
-console.log(typeof undefined)
 
 // ***********************************************************
 // ***********************************************************
