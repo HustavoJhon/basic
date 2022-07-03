@@ -49,6 +49,8 @@ console.log(typeof undefined)
 // ***********************************************************
 //! VARIABLES
 /**
+ * ?los nombres de las variables pueden tener espacios
+ * ?los nombre de variables deben enpezar por letras o guion bajo o dolar
  * Let: Declarar variables limitando su alcance al bloque, declaración, o expresión donde  se está usando.
  * Var: Define una variable global o local en una función sin importar el ámbito del bloque.
  *? la diferencia es el alcance de las variables
@@ -61,7 +63,7 @@ let colega;
 // Asignacion
 alumno = "Hustavo Jhon";
 
-// Reasignaicon
+// Reasignacicon
 let profesor = "Alexys Lozada";
 profesor = "Alvaro Felipe";
 console.log(profesor);
