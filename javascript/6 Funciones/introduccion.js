@@ -7,7 +7,7 @@
 function saluda() {
     console.log("Hola");
 }
-saluda();
+saluda(); //tambien podemos llamar la funcion antes de la funcion
 
 // Example 2
 function cuadrado(numero) {
@@ -20,5 +20,4 @@ console.log(cuadrado(3));
 
 //? Expresion de Funcion
 // let func = function(parametro) { <code> }
-
-MINUTO: 6:40
+// no podemos llamar la funcion despues de la declaracion de la funcion
