@@ -1,0 +1,14 @@
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    position: relative;
+    color: blue;
+}
+
+h1{
+    color: white;
+    background-color: black;
+    align-items: center;
+    text-align: center;
+    border: 20px;
+    border-radius: 20px;
+}
