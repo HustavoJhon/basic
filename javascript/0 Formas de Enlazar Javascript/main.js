@@ -1,1 +1,0 @@
-document.write("Mi Nombre es Jhon")
