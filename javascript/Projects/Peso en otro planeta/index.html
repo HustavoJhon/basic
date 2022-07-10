@@ -5,17 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Peso en otros planetas</title>
-    <style>
-        .script{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            height: 100vh;
-            background-color: blueviolet;
-            background-size: cover;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="assets/js/app.js"></script>
 </head>
 <body>
     <div align="center">
@@ -24,35 +15,5 @@
     </div>
     <!-- JAVASCRIPT -->
     <script src="app.js"></script>
-    <!-- <div class="script">
-    <script>
-         var usuario = prompt("Cual es tu peso?");
-        var planeta = parseInt(prompt("Elige tu planeta\n1 es marte, 2 es jupiter"));
-        var peso = parseInt(usuario);
-        var g_tierra = 9.8;
-
-        var g_marte = 3.7;
-        var g_jupiter = 24.8;
-        var peso_final;
-        var nombre;
-        if (planeta == 1)
-        {
-            peso_final = peso * g_marte / g_tierra;
-            nombre = "Marte";
-        }
-        else if(planeta == 2)
-        {
-            peso_final = peso * g_jupiter / g_tierra;
-            // nombre = "Jupiter";
-        }
-        else
-        {
-        peso_final = 1000000;
-        nombre = "Krypton";
-        }
-        peso_final = parseInt(peso_final);
-        document.write("Tu peso en " + nombre + " es <strong>" + peso_final + " kilos</strong>");
-    </script>
-    </div> -->
 </body>
 </html>

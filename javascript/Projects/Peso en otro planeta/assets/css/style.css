@@ -1,0 +1,9 @@
+.script{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 100vh;
+    background-color: blueviolet;
+    background-size: cover;
+}
