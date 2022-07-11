@@ -1,7 +1,11 @@
+// function here(id) {
+//     alert("Como te llamas");
+//     let name = prompt(">>");
+//     alert ("Hola " + name);
+// }
+
 function here(id) {
-    alert("Como te llamas");
-    let name = prompt(">>");
-    alert ("Hola " + name);
+    document.write("Como te llamas?")
 }
 
 // peso de el usuario
