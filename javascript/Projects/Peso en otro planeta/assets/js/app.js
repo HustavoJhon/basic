@@ -1,3 +1,9 @@
+function here(id) {
+    alert("Como te llamas");
+    let name = prompt(">>");
+    alert ("Hola " + name);
+}
+
 // peso de el usuario
 var usuario = parseInt(prompt("Cuanto Pesas?"));
 
@@ -18,6 +24,10 @@ if (planeta == 1){
     peso_final = peso * g_mercurio / g_tierra;
 } else if(planeta == 2) {
     peso_final = peso * g_venus / g_tierra;
-} else if
+} else{
+    alert("bye")
+}
 
-document.write("Tu en " + name_planeta + " pesa <strong>" + peso + "kilos </strong>")
+
+document.write("Tu en " + name_planeta + " pesa <strong>" + peso + "kilos </strong>");
+

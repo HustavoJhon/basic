@@ -7,3 +7,11 @@
     background-color: blueviolet;
     background-size: cover;
 }
+
+header {
+    text-align: center;
+}
+
+header p {
+    color: blueviolet;
+}
