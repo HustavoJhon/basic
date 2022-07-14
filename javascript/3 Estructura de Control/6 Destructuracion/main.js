@@ -23,4 +23,4 @@ const persona = {
 // en este caso debemos poner el mismo nombre que las claves nombre=>nombre
 // ademas debemos respetar el orden de las variables
 let {nombre,apellido,edad} = persona;
-console.log(nombre,apellido,edad)
+console.log(nombre,apellido,edad);
