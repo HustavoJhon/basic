@@ -5,10 +5,44 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Figuras</title>
+    <style>
+        span {
+            font-size: 30px;
+            display: block;
+            font-family: monospace;
+            white-space: nowrap;
+            border-right: 4px solid;
+            width: 19ch; /* el numero de caracteries del span  */
+
+            animation: typing 4s steps(19), blink .5s infinite step-end alternate;
+
+            overflow: hidden;
+        }
+        @keyframes typing {
+            from { width: 0;}
+        }
+        @keyframes blink {
+            50% { border-color: transparent;}
+        }
+    </style>
 </head>
 <body>
-   <h1>Figuras Geometricas</h1> 
+    <header>
+        <span>Figuras Geometricas</span>
+        <p>Este es el primer taller del curso practico de Javascript</p>
+    </header>
 
-   <script src="figuras.js"></script>
+    <section>
+        <h2>Calcula el area y perimetro de un Cuadrado</h2>
+        <form action="">
+            <label for="InputCuadrado">Escribe cuanto mide cada lado de tu cuadrado:</label> <br>
+            <input type="number">
+
+            <button id="InputCuadrado" type="button" onclick="calPerimetroCuadrado()">Calcular el perimetro</button>
+            <button type="button">Calcular el area</button>
+        </form>
+    </section>
+    
+    <script src="figuras.js"></script>
 </body>
 </html>
