@@ -13,3 +13,6 @@
     -uso de la consola para ver el estado de cada variable
     -uso de parseInt para redondear
 
+### Now Playing 🎧
+
+[![Spotify](https://novatorem-m84nrore7-developers.vercel.app/api/spotify)](https://open.spotify.com/user/akshat-rastogi-1n-c0re)

@@ -24,6 +24,10 @@
         @keyframes blink {
             50% { border-color: transparent;}
         }
+        .card {
+            align-items: center;
+            align-content: center;
+        }
     </style>
 </head>
 <body>
@@ -32,14 +36,32 @@
         <p>Este es el primer taller del curso practico de Javascript</p>
     </header>
 
-    <section>
+    <!-- CUADRADO -->
+    <section class="card">
         <h2>Calcula el area y perimetro de un Cuadrado</h2>
         <form action="">
-            <label for="InputCuadrado">Escribe cuanto mide cada lado de tu cuadrado:</label> <br>
-            <input type="number">
+            <label >Escribe cuanto mide cada lado de tu cuadrado:</label> <br>
+            <input id="inputCuadrado" type="number"> <br>
+            <button type="button" onclick="calPerimetroCuadrado()">Perimetro</button>
+            <button type="button" onclick="calAreaCuadrado()">Area</button>
+        </form>
+    </section>
 
-            <button id="InputCuadrado" type="button" onclick="calPerimetroCuadrado()">Calcular el perimetro</button>
-            <button type="button">Calcular el area</button>
+    <hr>
+
+    <!-- TRIANGULO -->
+    <section class="card">
+        <h2>Calcula el Area y Perimetro de un Cuadrado</h2>
+        <form>
+            <label for="inputTriangulo">Escribe cuanto mide </label> <br>
+            <input type="number" id="inputLado1" placeholder="Lado 1"> <br>
+            <input type="number" id="inputLado2" placeholder="Lado 2"> <br>
+            <input type="number" id="inputLado3" placeholder="Lado 3"> <br>
+            <button type="button" onclick="calPerimetroTriangulo()">Perimetro</button>
+            <br> <br>
+            <input type="number" id="inputBase" placeholder="Base"> <br>
+            <input type="number" id="inputAltura" placeholder="Altura"> <br>
+            <button type="button" onclick="calAreaTriangulo()">Area</button>
         </form>
     </section>
     

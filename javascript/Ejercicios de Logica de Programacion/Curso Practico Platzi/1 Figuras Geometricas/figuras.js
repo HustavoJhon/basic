@@ -75,14 +75,48 @@ console.groupEnd();
 
 
 //! AQUI INTERACTUAMOS CON HTML
+// TODO: CUADRADO
 function calPerimetroCuadrado() {
-    const input = document.getElementById("InputCuadrado");
+    const input = document.getElementById("inputCuadrado");
     const value = input.value;
     
     const perimetro = perimetroCuadrado(value);
-    alert(`El Perimetro es: ${perimetro}`)
+    alert(`El Perimetro es: ${perimetro} cm`);
 }
 
 function calAreaCuadrado() {
-    // const inpu
+    const input = document.getElementById("inputCuadrado");
+    const value = input.value;
+
+    const area = areaCuadrado(value);
+    alert(`El Area del Cuadrado es: ${area}cm^2`);
+}
+
+
+// *******************************************************
+
+
+// TODO: TRIANGULO
+function calPerimetroTriangulo () {
+    const inputLado1 = document.getElementById("inputLado1");
+    const inputLado2 = document.getElementById("inputLado2");
+    const inputLado3 = document.getElementById("inputLado3");
+
+    const lado1 = parseInt(inputLado1.value);
+    const lado2 = parseInt(inputLado2.value);
+    const lado3 = parseInt(inputLado3.value);
+
+    const perimetroT = perimetroTringulo(lado1, lado2, lado3);
+    alert(`El Perimetro del Triangulo es: ${perimetroT} cm`);
+}
+
+function calAreaTriangulo () {
+    const inputBase = document.getElementById("inputBase");
+    const inputAltura = document.getElementById("inputAltura");
+
+    const base = inputBase.value;
+    const altura = inputAltura.value;
+
+    const areaT = areaTriangulo(base, altura);
+    alert(`El area del Triangulo es: ${areaT} cm^2`);
 }
