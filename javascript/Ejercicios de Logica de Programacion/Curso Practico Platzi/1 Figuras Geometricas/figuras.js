@@ -120,3 +120,29 @@ function calAreaTriangulo () {
     const areaT = areaTriangulo(base, altura);
     alert(`El area del Triangulo es: ${areaT} cm^2`);
 }
+
+// *******************************************************
+//! CIRCULO 
+function calDiametroCirculo() {
+    const radio = document.getElementById("inputRadio");
+    const input = radio.value;
+
+    const D_Circulo = diametroCirculo(input);
+    alert(`El diametro del Circulo es ${D_Circulo}`)
+}
+
+function calPerimetroCirculo() {
+    const radio = document.getElementById("inputRadio");
+    const input = radio.value;
+
+    const P_Circulo = perimetroCirculo(input);
+    alert(`El Perimetro del Circulo es ${P_Circulo}`)
+}
+
+function calAreaCirculo() {
+    const radio = document.getElementById("inputRadio");
+    const input = radio.value;
+
+    const A_Circulo = areaCirculo(input);
+    alert(`El Area del Circulo es ${A_Circulo}`)
+}

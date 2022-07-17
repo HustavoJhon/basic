@@ -53,7 +53,7 @@
     <section class="card">
         <h2>Calcula el Area y Perimetro de un Cuadrado</h2>
         <form>
-            <label for="inputTriangulo">Escribe cuanto mide </label> <br>
+            <label>Escribe cuanto mide </label> <br>
             <input type="number" id="inputLado1" placeholder="Lado 1"> <br>
             <input type="number" id="inputLado2" placeholder="Lado 2"> <br>
             <input type="number" id="inputLado3" placeholder="Lado 3"> <br>
@@ -62,6 +62,20 @@
             <input type="number" id="inputBase" placeholder="Base"> <br>
             <input type="number" id="inputAltura" placeholder="Altura"> <br>
             <button type="button" onclick="calAreaTriangulo()">Area</button>
+        </form>
+    </section>
+
+
+    <!-- CIRCUNFERENCIA -->
+    <section>
+        <h2>Calcula El Diametro el Area y el Perimetro de un Circulo</h2>
+        <form>
+            <label>Diametro</label><br>
+            <input type="number" id="inputRadio" placeholder="Radio"> <br>
+            <button type="button" onclick="calDiametroCirculo()">Diametro</button>
+            <!-- <input type="number" id="inputDiametro" placeholder="Diametro"> -->
+            <button type="button" onclick="calPerimetroCirculo()">Perimetro</button>
+            <button type="button" onclick="calAreaCirculo()">Area</button>
         </form>
     </section>
     
