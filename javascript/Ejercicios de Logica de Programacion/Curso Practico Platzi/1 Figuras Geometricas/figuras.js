@@ -120,6 +120,16 @@ function calAreaTriangulo () {
     const areaT = areaTriangulo(base, altura);
     alert(`El area del Triangulo es: ${areaT} cm^2`);
 }
+// ?   para un triangulo isoceles
+/* 
+En este ejercicio debes crear una función para calcular la altura de un triángulo isósceles.
+
+La función debe recibir, como parámetros, la longitud de los 3 lados del triángulo.
+La función debe validar que la longitud de los 3 lados del triángulo corresponden a un triángulo isósceles.
+La función debe retornar la altura del triángulo.
+Pista: la función Math.sqrt de JavaScript puede ayudarte a calcular raíces cuadradas.
+*/
+
 
 // *******************************************************
 //! CIRCULO 
@@ -146,3 +156,4 @@ function calAreaCirculo() {
     const A_Circulo = areaCirculo(input);
     alert(`El Area del Circulo es ${A_Circulo}`)
 }
+
