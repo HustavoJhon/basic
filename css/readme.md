@@ -22,3 +22,10 @@ https://developer.mozilla.org/en-US/docs/Web/CSS/Pseudo-elements
 
 Meet the Pseudo Class Selectors | CSS-Tricks - CSS-Tricks
 https://css-tricks.com/pseudo-class-selectors/
+
+## Cascada y especificidad en CSS
+cuando hay escribiendose dos veces un estilo el que prevalece es el que esta abajo por que se sobre escribe
+Lecturas recomendadas
+
+Specificity Calculator
+https://specificity.keegan.st/
