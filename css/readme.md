@@ -7,7 +7,6 @@ de clase: .elemeto
 de id: id-del-elemento
 de atributo: a[href=""]
 universal: *
-
 ## Selectores combinadores
 Ahora que ya entendemos los selectores básicos, vienen los combinadores, que realmente nos ayudan a ser muchos más específicos 👀.
 .
@@ -48,3 +47,9 @@ Este es un selector MUY específico, y podemos ser aún más específicos, pero 
 Este puede ser un tema un poco complicado, ¡no te desanimes! Recuerda los consejos, para a practicar un rato, experimenta, curiosea, repite la clase si es necesario, pero hazlo hasta que lo consigas, ¡sé que tú puedes! >:3
 
 https://platzi.com/clases/2467-frontend-developer/40835-tipos-de-selectores-basicos-y-combinadores/
+
+
+## Códigos de Colores HTML
+
+https://htmlcolorcodes.com/es/
+
