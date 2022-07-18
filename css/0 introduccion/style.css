@@ -12,3 +12,17 @@ h1{
     border: 20px;
     border-radius: 20px;
 }
+p {
+    color: salmon;
+}
+p:hover {
+    color: brown;
+}
+
+p::first-letter {
+    color: darkcyan;
+}
+
+::placeholder {
+    color: sandybrown;
+}
