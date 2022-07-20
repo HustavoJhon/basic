@@ -1,6 +1,6 @@
 # Programacion Basica
 
->curso de programacion basica de platzi
+>curso de programacion basica de diferentes lenguajes
 
 #### Mi primera linea de codigo
     -primero buscamos about:blank
