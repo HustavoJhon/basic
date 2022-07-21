@@ -1,6 +1,6 @@
 # Programacion Basica
 
->curso de programacion basica de diferentes lenguajes
+>curso de programacion basica de diferentes lenguajes tanto de frontend y backend
 
 #### Mi primera linea de codigo
     -primero buscamos about:blank
