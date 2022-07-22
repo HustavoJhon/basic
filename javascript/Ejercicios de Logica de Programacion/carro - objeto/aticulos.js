@@ -24,7 +24,7 @@ var nombreArticulos = articulos.map(function(articulos) {
 console.log(nombreArticulos);
 
 
-//? FIEND
+//? FIND
 var encuentraArticulo = articulos.find(function(articulo) {
     return articulo.nombre === '📱';
 });
