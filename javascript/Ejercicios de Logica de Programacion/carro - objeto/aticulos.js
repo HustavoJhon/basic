@@ -42,3 +42,20 @@ var articulosBaratos = articulos.some(function(articulo) {
     return articulo.precio <= 1000;
 });
 console.log(articulosBaratos); //true
+
+//? PUSH
+let numArray = [1,2,3,4,5];
+function newNum() {
+    numArray.push(6,7)
+    console.log(numArray);
+}
+console.log(newNum());
+
+//? SHIFT
+let areglo = [9,8,7,6]
+let shitArray = areglo.shift()
+console.log(areglo);
+
+//? POP
+let popArray = areglo.pop();
+console.log(areglo);
