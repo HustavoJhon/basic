@@ -42,4 +42,13 @@ while (estudiantes.length > 0) {
 
 console.log("****************************");
 
+
+// function saludar(friends) {
+//     for (let i = 0; i < friends.length; i++) {
+//         const element = friends[i];
+//         console.log(`Hola Buen dia ${element}`)
+//     }
+// }
+// saludar(friends)
+
 console.log("****************************");
