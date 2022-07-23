@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <header>
+        <h1>Porcentajes y Descuento</h1>
+    </header>
+
+    <section>
+        <h2>Calcula el precio a pagar de tus productos con descuentos</h2>
+
+        <form>
+            <hr>
+            <label for="inputPrice">Escribe el precio de tu producto:</label> <br>
+            <input type="number" id="inputPrice">
+            <br> <br>
+            <label for="inputDiscount">Escribe el descuento de tu producto</label> <br>
+            <input type="number" id="inputDiscount">
+            <br>
+            <button type="button" onclick="calPriceDiscount()">
+                Calcular el precio con descuento
+            </button>
+            <p id="resultPrice"></p>
+            <hr>
+            
+            <!--? DESCUENTO POR CUPONES -->
+            <ul>
+                <li>1. Cupon <b>messi</b>| 50%</li>
+                <li>2. Cupon <b>cr7</b> | 5%</li>
+                <li>3. Cupon <b>scofield</b> | 30%</li>
+            </ul>
+             <label for="inputCupones">Escribe el Cupon para tener mas descuento</label> <br>
+            <input type="text" id="inputCupones">
+            <button type="button" onclick="calPriceCupones()">
+                Calcular el precio con cupones
+            </button>
+
+            <p id="resultCupon"></p>
+            <hr>
+        </form>
+    </section>
+
+
+    <section class="formula">
+        <article>
+            <h2>Formula</h2>
+            <b>P=precio, D=descuento</b> <br>
+            <strong style="font-size: 30px;">[P * (100 - D)] / 100</strong>
+        </article>
+
+        <h3>Ejemplos:</h3>
+        <ul>
+            <li>$100    Precio</li>
+            <li>15%     Descuento</li>
+            <li>$85     Compra</li>
+        </ul>
+        <ul>
+            <li>$120    Precio</li>
+            <li>15%     Descuento</li>
+            <li>$102    Compra</li>
+        </ul>
+    </section>
+    <!-- javascript -->
+    <script src="main.js"></script>
+</body>
+</html>
