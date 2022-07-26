@@ -16,6 +16,7 @@
 ### Ejercicios de Logica
     - Calculadora
     - Cual es tu peso en otro pais
+    - Cuanto es 2 + 2
 
 
 [![Spotify](https://novatorem-m84nrore7-developers.vercel.app/api/spotify)](https://open.spotify.com/user/akshat-rastogi-1n-c0re)
