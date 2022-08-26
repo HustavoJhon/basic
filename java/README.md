@@ -2,4 +2,4 @@
 
 ---
 
-> Idea: intellij
+IDE: Intellij IDEA
