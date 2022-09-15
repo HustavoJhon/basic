@@ -1,0 +1,15 @@
+C:\Users\husta\github\basic\c#\example\HolaMundo\bin\Debug\net6.0\HolaMundo.exe
+C:\Users\husta\github\basic\c#\example\HolaMundo\bin\Debug\net6.0\HolaMundo.deps.json
+C:\Users\husta\github\basic\c#\example\HolaMundo\bin\Debug\net6.0\HolaMundo.runtimeconfig.json
+C:\Users\husta\github\basic\c#\example\HolaMundo\bin\Debug\net6.0\HolaMundo.dll
+C:\Users\husta\github\basic\c#\example\HolaMundo\bin\Debug\net6.0\HolaMundo.pdb
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.csproj.AssemblyReference.cache
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.AssemblyInfoInputs.cache
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.AssemblyInfo.cs
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.csproj.CoreCompileInputs.cache
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.dll
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\refint\HolaMundo.dll
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.pdb
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\HolaMundo.genruntimeconfig.cache
+C:\Users\husta\github\basic\c#\example\HolaMundo\obj\Debug\net6.0\ref\HolaMundo.dll
