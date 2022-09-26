@@ -1,0 +1,11 @@
+namespace EjemploReporte
+{
+    public partial class MostrarReporte : Form 
+    {
+        public MostrarReporte()
+        {
+            InitializeComponent();
+        }
+        public DateTime fecha { get; set;}
+    }
+}
