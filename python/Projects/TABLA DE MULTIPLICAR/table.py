@@ -15,3 +15,5 @@ a = 1
 while (a < 11):
     tab(a)
     a = a + 1
+
+print("Gracias por usar mi app")
