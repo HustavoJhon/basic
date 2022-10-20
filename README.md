@@ -1,6 +1,9 @@
 ### ***Basic Programming***
+
+---
+
 ```js
 let code = {
-        basic: 'Programming',
+        basic: 'Programming';
     }
 ``` 
