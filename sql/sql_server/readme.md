@@ -63,7 +63,7 @@ los tipos de datos de SQL Server se organizan en las siguientes categorias:
 ### **CADENAS DE CARACTERES**
 
 | Tipos de datos | Intervalo | 
-| -- | -- | -- |
+| -- | -- | 
 | char | char [ ( n ) ] Datos de cadena de tamaño fijo. n define el tamaño de la cadena en bytes y debe ser un valor entre 1 y 8000. Para juegos de caracteres de codificación de byte único, como el latino, el tamaño de almacenamiento es n bytes y el número de caracteres que se pueden almacenar también es n. Para los juegos de caracteres de codificación multibyte, el tamaño de almacenamiento sigue siendo n bytes, pero el número de caracteres que se pueden almacenar puede ser menor que n. El sinónimo ISO para char es character |
 | varchar | varchar [ ( n | max ) ] Datos de cadena de tamaño variable. Utilice n para definir el tamaño de la cadena en bytes, que puede ser un valor comprendido entre 1 y 8000, o bien use max para indicar un tamaño de restricción de columna hasta un almacenamiento máximo de 2^31-1 bytes (2 GB). Para juegos de caracteres de codificación de byte único, como el latino, el tamaño de almacenamiento es n bytes + 2 bytes y el número de caracteres que se pueden almacenar también es n. Para los juegos de caracteres de codificación multibyte, el tamaño de almacenamiento sigue siendo n bytes + 2 bytes, pero el número de caracteres que se pueden almacenar puede ser menor que n. Los sinónimos ISO para varchar son charvarying o charactervarying |
 |text, ntext, image | Tipos de datos de longitud fija y variable para almacenar valores de gran tamaño con datos de caracteres y binarios Unicode y no Unicode. Los datos Unicode utilizan el juego de caracteres UNICODE UCS-2.
