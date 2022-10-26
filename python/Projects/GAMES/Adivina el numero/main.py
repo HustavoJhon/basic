@@ -1,6 +1,3 @@
-from pip import main
-
-
 import random
 
 def run():
