@@ -40,8 +40,6 @@ learn basic programming ツ.
 </p>
 -->
 
-<h2></h2><br>
-
 <div align="right">
 
 [![Python](https://img.shields.io/badge/-black?style=flat&logo=python&logoColor=3A70A0&link=#python)](https://github.com/hustavoJhon)
