@@ -19,3 +19,8 @@ def run():
 
 if __name__ == '__main__':
     run()
+
+
+HOLA = 'hola'
+HOLA = 'hi'
+print(HOLA)
