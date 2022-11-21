@@ -72,3 +72,12 @@ learn basic programming ツ.
 
 </div>
 </details>
+
+
+## DIRECTORI 
+---
+```shell
+
+echo "hello"
+```
+## DIRECTORI
