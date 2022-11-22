@@ -1,5 +1,20 @@
 <h1 align="center"> Aprendiendo JavaScript</h1>
 
+
+```
+$JAVASCRIPT
+├── 0 Introduccion    
+    ├── 1 Recursos   
+    ├── 2 Rules 
+    ├── 3 Caracteristicas      
+    └── 4 ECMAScript  
+
+└── 1 Tipos de Datos 
+    ├── 1 Variables   
+    ├── 2 Primitivos 
+    ├── 3 Compuestos      
+```
+
 > Aprendiendo las bases del lenguje web mas demandado. Desde cero hasta ECMAScript6 <br>
 
 ## __Sobre Javascript__
