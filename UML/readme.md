@@ -45,6 +45,18 @@ Matriz de Proceso
 |    | | Asignar uauario y roles y password | TIC | Alto |   |  |  
 |  |  | Establecer politica de seguridad | TIC | Alto |||
 
+---
+# ,.
+---
+
+
+|Nro CUN|Descripcion CUN|Requerimientos|Areas o Jefaturas|Nivel Riesgo|CU|Descipcion|
+|---|---|---|---|---|--|--|
+|  | | Dar de alta al cliente (generar formulario con sus datos) | TIC | Alto | Ingresar datos de lcliente en el sistema | Ingresar los datos del cliente a la base de datos de la compan~ia, teniendo cuidado importante en los datos de email, DNI |  
+| 01 | Iniciar sesion | Validar la informacion de alta | TIC | ALto |   |  |  
+|    | | Asignar uauario y roles y password | TIC | Alto |   |  |  
+|  |  | Establecer politica de seguridad | TIC | Alto |||
+
 <img src="doc/exampleR.png">
 
 ### Iniciar sesion 
@@ -70,3 +82,6 @@ Matriz de Proceso
 
 
 <img src="doc/requerimientos.png">
+
+
+seleccionar el metodo de pago
