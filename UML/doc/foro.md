@@ -20,11 +20,11 @@ El diagrama de casos de usos nos sirve para capturar requisitos funcionales del 
 
 **¿Qué metodología se considera aplicable al momento de desarrollar aplicaciones multimedia interactivas?**
 
-
+Utilizaria la metodologia MEDESME el cual tiene 8 fases principales los cuales nos ayudara a que nuestro programa sea para un entorno general, pedagogico estetico.
 
 **¿Cuál es el primer modelo de ciclo de vida de software que se ha utilizado?**
 
-Utilizaria la metodologia MEDESME el cual tiene 8 fases principales los cuales nos ayudara a que nuestro programa sea para un entorno general, pedagogico estetico.
+El primer modelo fue el de Royce, mas conocido como la Cascada o Lineal Secuencial que tenia como establecido las diversas actividades que se van a realizar desarrollando un producto de software 
 
 **¿Tipo de modelo de ciclo de vida que consta de requerimientos, diseño, implementación, prueba y mantenimiento?**
 
