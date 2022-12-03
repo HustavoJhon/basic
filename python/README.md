@@ -1,26 +1,41 @@
 # Python
+<img src="doc/guido-van-rossum.webp"
+     alt="Guido van Rossum"
+     width="200"
+     style="float: left; margin-right: 5px;" />
+<div align="left">
+
+>„Hace más de seis años, en diciembre de 1989, estaba buscando un proyecto de programación "pasatiempo" que me mantuviera ocupado durante la semana de Navidad. Mi oficina... estaría cerrada, pero tenía una computadora en casa y no mucho más a mano. Decidí escribir un intérprete para el nuevo lenguaje de secuencias de comandos en el que he estado pensando últimamente: un descendiente de ABC que atraería a los piratas informáticos de Unix/C. Elegí Python como título provisional para el proyecto, ya que estaba de un humor un poco irreverente (y también era un gran admirador de Flying Circus de Monty Python).“
+
+</div>
+
 ---
 
-> Python es un leguaje de programacion especialmente para ciencia de datos
-
-## **tree**
+## **tree 🌳**
 
 ```bash
-|-- .bowerrc
-    |-- .jshintrc
-    |-- .jshintrc2
-    |-- Gruntfile.js
-    |-- README.md
-    |-- bower.json
-    |-- karma.conf.js
-    |-- package.json
-    |-- app
-        |-- app.js
-        |-- db.js
-        |-- directoryList.md
-        |-- index.html
-        |-- mddir.js
-        |-- routing.js
-        |-- server.js
-        |-- _api
+Python 🐍
+├── 0 Introduction
+│   ├── Rules
+│   ├── History
+│   └── Resources
+│  
+├── 1 Fundamentals
+│   ├── Variables
+│   ├── Type of data
+│   └── Arrays
+│
+├── 2 Control Structure
+│   ├── Operators
+│   ├── Conditionals
+│   ├── Loops
+│   ├── Functions
+│   └── Modules
+│
+├── 3 POO
+│   ├── 
+│   ├── 
+│   ├── 
+│   ├── 
+│   └── 
 ```
