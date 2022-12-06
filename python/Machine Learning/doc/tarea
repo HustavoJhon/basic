@@ -1,0 +1,13 @@
+**AlGORITMO 
+- Filtro de Spam basado en Machine Learning.
+	- Aprende de forma automatica palabras, frases, atipicamente frecuentes, que nos permitan predecir que es un spam, patrones.
+	- Lista de datos de posibles correos  Spam vs Ham.
+- El algoritmo y el programa, sea mas cortos, es mas facil de entender, mas facil de mantener, mas exacto.
+
+
+** AlGORITMO
+
+> Algoritmo SOLUCIÓN – DISTINGA “UNO (1)”-”DOS (2)”
+
+- Entrada de datos > input()
+  - Aprender de forma autmatica  
