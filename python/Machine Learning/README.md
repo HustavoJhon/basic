@@ -42,6 +42,10 @@ Permite a los algoritmos aprender a partir de datos históricos recolectados por
 ## Que es el Machine Learning?
 * Ciencia , El Arte, de programar computadoras, automatas, etc. para que aprendan a  partir de datos.
 * Ejemplos, cantidad de datos = conjuntos de entrenamiento. 
+- Spam
+- Programacion tradicional
+
+<img src="doc/porqueml.png">
 
 ## Por que el Machine Learning?
 * SPAM:
@@ -73,7 +77,7 @@ Permite a los algoritmos aprender a partir de datos históricos recolectados por
 	- Fin
 - End.
 
-**AlGORITMO 
+**AlGORITMO** 
 - Filtro de Spam basado en Machine Learning.
 	- Aprende de forma automatica palabras, frases, atipicamente frecuentes, que nos permitan predecir que es un spam, patrones.
 	- Lista de datos de posibles correos  Spam vs Ham.
@@ -87,13 +91,14 @@ Permite a los algoritmos aprender a partir de datos históricos recolectados por
 #### Enfoque de Machine Learning
 
 _Estudiar el problema_ --> *Entrenar Algoritmo de ML --> Evaluar --> Ejecutar...!
+<img src="doc/enfoquedeml.png">
 
 ## Adaptacion al cambio de forma automatica 
 **Entrenar Algoritmo de ML
 Actualizar datos
 Evaluar 
 Ejucutar
-
+<img src="doc/adaptacionalcambiodeformaautomatica.png">
 ## Solucion - Distinga "UNO(1)"-"DOS(2)"
 * Diccionario Var: voz= sonido
   * Conjunto de entranamiento: [grabaciones de voz]
@@ -135,6 +140,8 @@ Ejucutar
  
 - Aprendizaje supervisado:
   - El conjunto de entrenamiento que usamos en el algoritmo incluye las soluciones deseadas, soluciones deseadas = etiquetas
+
+<img src="doc/aprendizajesupervisado.png">
 
 ### Atributos vs Caracteristica
 
