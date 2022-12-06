@@ -83,7 +83,8 @@ Permite a los algoritmos aprender a partir de datos históricos recolectados por
 	- Lista de datos de posibles correos  Spam vs Ham.
 - El algoritmo y el programa, sea mas cortos, es mas facil de entender, mas facil de mantener, mas exacto.
 
-**MINERIA DE DATOS
+**MINERIA DE DATOS**
+
 - los que envian el Spam, se dan cuenta " Tarjeta de credito", son bloqueados, ahora te mandan "Credit card", "regalo".
 - Evitar el filtro.
 - Tecnica 
@@ -99,6 +100,7 @@ Actualizar datos
 Evaluar 
 Ejucutar
 <img src="doc/adaptacionalcambiodeformaautomatica.png">
+
 ## Solucion - Distinga "UNO(1)"-"DOS(2)"
 * Diccionario Var: voz= sonido
   * Conjunto de entranamiento: [grabaciones de voz]
@@ -123,7 +125,7 @@ Ejucutar
 
 ## Tipos de sistemas ML 
 
-- Modelos que se entran o no bajo supervision humana.
+- **Modelos que se entran o no bajo supervision humana.**
   - Aprendizaje supervisado.
   - No supervisado. 
   - Semi supervisado.
@@ -132,7 +134,7 @@ Ejucutar
   - Aprendizaje online.
   - Aprendizaje po lotes.
 
-- **Modelo comparando datos nuevos contra datos conocidos, o detectan patrones en los datos de entrenamiento y crean modelos predictivos.
+- **Modelo comparando datos nuevos contra datos conocidos, o detectan patrones en los datos de entrenamiento y crean modelos predictivos.**
   - Aprendizaje basado en instancias.
   - Aprendizaje basado en modelos.
 
