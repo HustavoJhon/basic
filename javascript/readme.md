@@ -2,17 +2,31 @@
 
 
 ```
-$JAVASCRIPT
-├── 0 Introduccion    
-    ├── 1 Recursos   
-    ├── 2 Rules 
-    ├── 3 Caracteristicas      
-    └── 4 ECMAScript  
-
-└── 1 Tipos de Datos 
-    ├── 1 Variables   
-    ├── 2 Primitivos 
-    ├── 3 Compuestos      
+👑JAVASCRIPT
+├── 0 Introduction
+│   ├── Rules
+│   ├── History
+│   ├── EMACScript
+│   └── Resources
+│
+├── 1 Fundamentals
+│   ├── Variables
+│   ├── Type of data
+│   └── Arrays
+│
+├── 2 Control Structure
+│   ├── Operators
+│   ├── Conditionals
+│   ├── Loops
+│   ├── Functions
+│   └── Modules
+│
+├── 3 POO
+│   ├──
+│   ├──
+│   ├──
+│   ├──
+│   └──
 ```
 
 > Aprendiendo las bases del lenguje web mas demandado. Desde cero hasta ECMAScript6 <br>
