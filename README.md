@@ -6,9 +6,9 @@
 
 <div align="center">
 
-```css
+`
 learn basic programming ツ.                                          
-```   
+`   
 
 <div align="right">
 
