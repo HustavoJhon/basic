@@ -1,13 +1,10 @@
 <p align="center">
 <samp>
-<div align="left">
-
-</div>
 
 <div align="center">
 
 `
-learn basic programming ツ.                                          
+learn basic programming.                                          
 `   
 
 <div align="right">
