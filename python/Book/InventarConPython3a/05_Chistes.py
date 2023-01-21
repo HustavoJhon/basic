@@ -7,7 +7,7 @@ TEMAS TRATADOS EN ESTE CAPITULO
 - Utilizando comillas simples y dobles para las cadenas
 - Utilizando el argumento palabra clave final (end) de print() para evitar nuevas lineas
 '''
-'''
+
 print('¿Qué sale de la cruza entre un mono y un pato?')
 input()
 print('¡Un monopatín!')
@@ -24,6 +24,5 @@ print('En que el bombero y el barco tienen casco.')
 input()
 print('¿Y la familia?', end='')
 print(' -Bien, gracias.')
-'''
 
 

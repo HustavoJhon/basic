@@ -36,3 +36,20 @@
 |--|--|--|
 |not True|es|Flase|
 |not False|es|True|
+
+### Capitulo 7 "Usando El Depurador"
+
+**Los tipos cuebiertos en este capitulo:**
+- 3 tipos diferentes de errores
+- Depurador de IDLE
+- Entrar en, sobre, salir
+- Ir y salir
+- Puntos de quiebre
+
+| Boton | Resultado |
+|--|--|
+|Go|Ejecuta el resto del código normalmente, o hasta que alcanza un punto de quiebre (break, que será descripto luego).|
+|Step|Ejecuta una línea de código. Si la línea es una llamada a una función, el depurador ingresará dentro de la función.|
+|Over| Ejecuta una línea de código. Si la línea es una llamada a una función, el depurador no ingresará dentro de la función.|
+|Out|Ejecuta líneas de código hasta que el depurador salga de la función en la que estaba cuando se presionó Out. Esto sale de la función.|
+|Quit|Termina el programa inmediatamente|
