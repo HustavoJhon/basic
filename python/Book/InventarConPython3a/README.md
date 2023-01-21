@@ -53,3 +53,12 @@
 |Over| Ejecuta una línea de código. Si la línea es una llamada a una función, el depurador no ingresará dentro de la función.|
 |Out|Ejecuta líneas de código hasta que el depurador salga de la función en la que estaba cuando se presionó Out. Esto sale de la función.|
 |Quit|Termina el programa inmediatamente|
+
+### Capitulo 8 "Diagramas de Flujo"
+
+**Temas tratados en este Capitulo**
+- Como jugar al ahorcado
+- Arte ASCII
+- Diseño de un Programa mediante Diagramas de Flujo
+
+

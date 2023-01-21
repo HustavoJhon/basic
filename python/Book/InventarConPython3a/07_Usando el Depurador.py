@@ -18,21 +18,24 @@ else:
 
 import random
 
-print('Lanzare una moneda 1000 veces. Adibina cuantas veces caera Cara.(Presiona enter para comensar)')
+print('Lanzare una moneda 1000 veces. Adibina cuantas veces caera Cara.\n(Presiona enter para comenzar)')
 input()
+
 lanzamientos = 0
-caraz = 0 
+caras = 0 
 
 while lanzamientos < 1000:
     if random.randint(0, 1) == 1:
-        caras = caras + 1 
-    lanzamientos('900 lanzamientos y hubo ' + str(caras)+ ' caras')
+        caras += 1 
+    lanzamientos += 1
     if lanzamientos == 100:
-        print('En 100 lanzamientos,cara salio ' + str(caras)+' veces.')
+        print(f'En 100 lanzamientos > {caras} caras.')
     if lanzamientos == 500:
-        print('La midatad de los lanzamientos y salio' + str(catas)+' veces.')
+        print(f'En 500 lanzamientos >  {caras} caras.')
+    if lanzamientos == 900:
+        print(f'En 900 lanzamientos > {caras} caras.')
         
 print()
 
-print('De 1000 lanzamientos, al final carca '+str(caras)+'veces')
-print('Estube cerca')
+print(f'En 1000 lanzamientos > {caras} caras')
+print('Estuviste cerca?')
