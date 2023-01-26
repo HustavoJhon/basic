@@ -3,7 +3,7 @@
 <p align="center">
 <samp>
 <div align="left">
-    <img  alt="gif" width="150px" align="left" src="doc/guido-van-rossum.webp" />
+    <img  alt="gif" width="150px" align="left" src="doc/img/guido-van-rossum.webp" />
 </div>
 
 <div align="center">

@@ -30,5 +30,3 @@ if estimacion == numero:
 if estimacion != numero:
     print(f'Pues no. El numero que estaba pensando era {numero}')
         
-
-
