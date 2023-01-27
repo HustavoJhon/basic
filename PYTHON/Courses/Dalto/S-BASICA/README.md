@@ -1,2 +1,0 @@
-# SECCION BASICA
-
