@@ -61,4 +61,14 @@
 - Arte ASCII
 - Diseño de un Programa mediante Diagramas de Flujo
 
+### Capitulo 9
+
+### Capitulo 9 1/2 "Extendiendo Ahorcado
+
+**Temas Tratados en este capitulo:**
+
+- Diccionario de datos
+- Duplas clave-valor (key-value)
+- Los metodos keys() y values() del diccionario
+- Asignaciones de variables multiples
 
