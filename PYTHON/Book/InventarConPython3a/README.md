@@ -72,3 +72,10 @@
 - Los metodos keys() y values() del diccionario
 - Asignaciones de variables multiples
 
+### Capitulo 10 "Ta Te Ti"
+**Temas Tratados en este capitulo:**
+- Inteligencia Artificial
+- Referencias en Listas
+- Evaluacion en Cortocircuito
+- El Valor None
+
