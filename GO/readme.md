@@ -1,22 +1,59 @@
-<h1 align="center">Goland</h1>
+<center><h1>Lenguaje de progrmación Go (Golang)</h1></center>
 
-## Que es Go?
-> Go es un lenguaje de programacion OpenSource que hace que sea facil contruir software simple, eficiente y robusto, Creado en Google.
+## Historia
 
-## Quien usan Go?
-    google
-    Youtube
-    Timehop
-    Uber
-    Basecamp
-    Twitch
-    Twitter
-    MongoDB
-    Imgur
-    Facebook
-    Dropbox
-    eBay 
-    CloudFlare
-    Yahoo
++ Creado en Google en 2007 por Robert Griesemer. Rob Pike y Ken Thompson. Creado con intención de que en Google necesitaban un lenguaje que le pudiera ayudar a crear o manejar procesos extremadamente pesados, entonces necesitaban un lenguaje con la potencia de C, pero con una sintaxis más amigable como la de Python.
 
-## Por que Aprender Go
++ Anunciado en Noviembre del 2009 sin embargo su primera versión salío en Marzo del 2012.
+
++ Surge de la necesidad de Google y otras grandes empresas de combinar:
+  
+  + Seguridad y rendimiento, las proveen los lenguajes compilados y de tipado estático.
+  
+  + Expresividad y conveniencia, las proveen los lenguajes interpretados y de tipado dinámico.
+
++ Influencia de lenguajes:
+  
+  + De C, se tomó su sintaxis.
+  
+  + De Pascal y derivados, se tomó importación de paquetes y declaraciones.
+  
+  + De CSP y descendientes, se tomó el concepto de concurrencia.
+
++ Su nombre oficial es Go, sin embargo desde la comunidad, para evitar confusiones con la palabra en ingles, se utilizó el término Golang.
+
++ Los programadores de este lenguaje se hacen llamar "Gophers".
+
+## ¿Qué es Go?
+
++ Es compilado (Cross-compiling y rápido) y estáticamente tipado o fuertemente tipado, eso quiere decir que tienes que compilar el código para poder ejecutarlo en tu máquina y estáticamente tipado indica que tienes que especificarle el tipo de variable o tipo de constante para poder guardar un valor en el.
+
++ Concurrencia de forma nativa.
+
++ Multiparadigma (Estructurada, Orientada a objetos, Reactiva, etc.).
+
++ Guía de estilos.
+
++ No tienen excepciones.
+
++ No implementa la programación orientada objetos (POO) de manera clasíca.
+
++ Obliga a implemetar buenas prácticasde programación.
+
++ Gran velocidad de compilación.
+
++ Alto rendimiento para tareas pesadas, ya que de forma nativa ellos utilizan.
+
+## ¿Quiénes usan Go?
+
+**_Go es utilizado en múltiples en mpresas:_**
+
++ **MercadoLibre:** Ellos utilizan para procesar 70.000 REQUEST en máquinas solamente de 20 MB RAM.
+
++ **Twitch:** Utilzan para usuarios de forma concurrente con sus conexiones.
+
++ **Twitter:** Utiliza Go para procesar analítica de la App.
+
++ **Uber:** Utiliza Go para mantener en posición en tiempo real tanto conductores o como pasajeros.
+
++ **Docker** y **Kubernetes:** Para despliegue de Apps.
