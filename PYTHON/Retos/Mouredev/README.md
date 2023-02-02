@@ -41,3 +41,16 @@ El programa recibirá una secuencia formada por "P1" (Player 1) o "P2" (Player 2
 - Si quieres, puedes controlar errores en la entrada de datos.   
 - Consulta las reglas del juego si tienes dudas sobre el sistema de puntos.   
 ```
+
+### Reto # 3: EL GENERADOR DE CONTRASEÑAS
+> DIFICULTAD: Media
+
+```
+Escribe un programa que sea capaz de generar contraseñas de forma aleatoria.
+Podras configurar generar contraseñas con los siguientes parametros:
+- Longitud: Entre 8 y 16.
+- Con o sin letras mayusculas.
+- Con o sin numeros.
+- Con o sin simbolos.
+(pudiendo combinar todos estos parametros entre ellos)
+```
