@@ -64,6 +64,11 @@ def calcular_peso(peso):
             print(f"Ok {user_name} en Marte pesas: {peso_marte} kg")
             space = input()
             os.system("clear")
+        elif user == 4:
+            peso_jupiter = round((peso*JUTIPER/TIERRA),2)
+            print(f"OK {user_name} en Jupiter pesas: {peso_jupiter}")
+            space = input()
+            os.system("clear")
         else: 
             print("Gracias por usar el  programa <3")
             break
