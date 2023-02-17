@@ -27,5 +27,20 @@ Aunque nunca es mejor que *ahora mismo*. <br>
 Si la implementación es difícil de explicar, es una mala idea. <br>
 Si la implementación es fácil de explicar, puede ser una buena idea. <br>
 Los espacios de nombres son una gran idea, ¡hagamos más de ellos!
-
 </details>
+
+
+## EL Scope 
+
+```
+Built-in
+    ^
+    |
+Global scope
+    ^
+    |
+Enclosing scope
+    ^
+    |
+Local scope
+```
