@@ -2,26 +2,46 @@
 
 > Git es una herramienta muy polular en la industria del software, que permite a los equipo colaborar de maneta eficiente en el desarrollo de softeare y mantener un registro completo de todos los cambios realizados en el código fuente. Al usar Git, los desarrolladores pueden trabajar en el mismo proyecto sin afectar el trabajo de otros desarrolladores y pueden revertir fácilmente los cambios si es necesario. Git también es flexible y altamente personalizable, lo que lo hace adecuado para una amplia gama de proyectos, desde pequeños proyectos personales hasta grandes proyectos empresariales.
 
-**Puntos Clave**
+## Por que Git?
 
-- Git es un sistema de control de versiones distribuido que permite a lso desarrolladores rastrear y coordinar el trabajo en codigo fuente durante el proceso de desarrollo de software.
+1. Velocidad
+2. Disenio sencillo
+3. Fuerte apoyo en el desarrollo no lineal
+4. Completamente distribuido
+5. Capaz de menjar grandes proyectos 
 
-- Permite a los desarrolladores trabajar en mismo proyecto sin afectar el trabajo de otros desarooladores y puede revertir facilmente los cambios si es necesario.
+### Git tiene integridad 
+> No puedes perder informacion durante su transmicion durante su transmision o sufrir corrupcion de archivos sin que git lo detecte
 
-- Es una herramienta muy popular en la industria del software, utilizando por desarrolladores de todo el mundo y respalda por una gran comunidad de usuarios y desarrolladores.
+**SHA-1** son 40 caracteres exadecimales con los que se guarda los cambios
 
-- Git es flexible y altamente personalizable, lo que lo hace adecuado para una amplia gama de proyectos, desde pequeños proyectos personales hasta grandes proyectos empresariales.
+### Los 3 Estados
 
-- Proporciona una gran cantidad de características y funcionalidades que ayudan a los desarrolladores a colaborar de manera eficiente, incluyendo la gestión de ramas, la fusión de código y la integración con otros servicios y herramientas de desarrollo.
+**Local Operations**
 
-- Git también es gratuito y de código abierto, lo que significa que cualquier persona puede descargar y utilizar el software de manera gratuita y también contribuir al desarrollo del software.
+- Working directory-. 
+- Staging area-.
+- Git directory (repository)
 
-**carracteristicas**
+### Git !== Github
 
-- Casi todo en git es local, Es dificil que se necesiten recursos o informacion exterior, basta con el recursos locales con los que cuenta.
+### Config
+`git --version`
+`git config --global user.email me@gmail.com`
+`git config --global user.name "Gustavo Jhon"`
+`git config --global color.ui true`
 
-- Git cuenta con 3 estados en los que podemos localizar nuestro archivo:
+### Linea de Comandos
+[themePokemon](https://github.com/LazoCoder/Pokemon-Terminal)
+`cd` -> entrar en directorios
+`cd ..` -> salir de carpetas
+`mkdir` -> crear carpetas
+`rmdir` -> eliamianar carpetas
+`ls` -> listar el contenido de mi carpeta actual
+`clear` -> limpiar la terminal 
+`touch` -> crear archivos 
+`rm` -> eliminar archivos 
+`rm -r` -> eliminar carpetas force
 
-1. Committed. Es la parte en la que nuetra informacion esta segura alojado en nuestras bases de datos.
-2. Modified. En esta parte hemos realizado cambios en nuetro archivo, pero aun no se ven reflejados en nuestra basse de datos.
-3. Stagen. En esta parte marcamos nuestros archivos modificados dejandolos listos para confirmarlos. 
+### Editores de codigo
+`vim` y `neovim`
