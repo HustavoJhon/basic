@@ -1,5 +1,6 @@
 <div align="center">
->the repo is for learn programming in:
+
+> the repo is for learn programming in:
 
 [![Python](https://img.shields.io/badge/PYTHON-black?style=flat&logo=python)](https://github.com/hustavoJhon)
 [![JavaScript](https://img.shields.io/badge/Javascript-black?style=flat&logo=javascript)](https://github.com/hsutavojhon) 
