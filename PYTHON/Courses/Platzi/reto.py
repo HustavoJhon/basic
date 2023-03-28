@@ -13,3 +13,16 @@ numbers = [2,4,6,8]
 
 resolve = multiply_numbers(numbers)
 print(resolve)
+
+
+# reto 24
+
+# filtra las palabras que tengan mas de 4 letras
+
+def x(words):
+    new_list = list(filter(lambda item : len(item) >= 4, words))
+    return new_list
+
+words = ['amor','dia','piedra','sol']
+response = x(words)
+print(response)
