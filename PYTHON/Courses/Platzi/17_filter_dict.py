@@ -34,3 +34,8 @@ print('---')
 nueva_lista  = list(filter(lambda x: x['home_team_score'] == 3, matches))
 
 print(nueva_lista)
+
+
+print('mas goles en un partido')
+nueva_lista = list(filter(lambda gol: gol['home_team_score'] > 3, matches))
+print(nueva_lista)
