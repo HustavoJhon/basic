@@ -15,3 +15,8 @@ pip freeze
 
 1. [gitignore.io](https://gitignore.io)
 2. [pyppi.org](https://pypi.org)
+
+
+## Ambientes virtuales
+
+> encapsulan  cada proyecto y no lo dejan de forma compartida ya que por lo general se necesita diferentes versiones de modulos para nuestro priyecto y al momento de instalar una version desinstala otra y eso genera comfligtos
