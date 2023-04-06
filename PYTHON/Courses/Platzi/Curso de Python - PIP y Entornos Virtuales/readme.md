@@ -20,3 +20,30 @@ pip freeze
 ## Ambientes virtuales
 
 > encapsulan  cada proyecto y no lo dejan de forma compartida ya que por lo general se necesita diferentes versiones de modulos para nuestro priyecto y al momento de instalar una version desinstala otra y eso genera comfligtos
+
+```python
+# verificar donde esta python y pip
+which python
+which pip
+```
+
+```python
+# for linux and wsl
+apt install -y python3-venv
+```
+
+```python
+# Poner cada proyecto en su propio ambiente, entrar en cada carpeta.
+python3 -m venv env
+# Windows
+py -m venv venv
+```
+
+```python
+# Activar el entorno virtual
+source env/bin/activate
+# windows 
+.\env\Scripts\activate
+# Desactivar entorno virtual
+deactivate
+```
