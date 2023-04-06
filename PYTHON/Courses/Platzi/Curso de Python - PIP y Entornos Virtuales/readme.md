@@ -1,4 +1,4 @@
-## Game 
+# Game 
 para correr el juego debes seguir las siguientes instrucciones en la terminal
 
 ```
@@ -46,4 +46,22 @@ source env/bin/activate
 .\env\Scripts\activate
 # Desactivar entorno virtual
 deactivate
+```
+
+## requerements.txt
+
+```python
+# generar dependencia y versiones de modulos que necesita para crear requirements.txt
+pip freeze > requiremens.txt
+# instalar dependencias y versinode de modulos con pip que esta dentro de requirements.txt
+pip install -r requirements.txt
+```
+
+# App Project
+```sh
+git clone
+cd app
+source env/bin/activate
+pip3 install -r requirements.txt
+python3 main.py
 ```
