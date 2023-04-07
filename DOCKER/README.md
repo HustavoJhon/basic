@@ -14,3 +14,45 @@ aplicación en cualquier lado.
 |Equivalencia con entorno |Equivalencia con entorno productivo|Recursos de hardware
 |Servicios externos|Servicios externos
 
+### Virtualización
+
+> ... versión virtual de algún recurso
+tecnológico, como (...) hardware,
+un sistema operativo, un
+dispositivo de almacenamiento o
+(...) recurso de red.
+
+Permite atacar en simultáneo
+los tres problemas del
+desarrollo de software
+profesional.
+
+#### Problemas de las VMsVirtualización
+
+**Peso**
+
+_En el orden de los GBs. Repiten archivos en común.
+Inicio lento._
+
+**Costo de administración**
+
+_Necesita mantenimiento igual que cualquier otra
+computadora._
+
+**Múltiples de formatos**
+
+_VDI, VMDK, VHD, raw, etc._
+
+### Containerización 
+
+> El empleo de contenedores para
+construir y desplegar software. 
+
+- Flexibles
+- Libianos
+- Portables
+- Bajo acoplamiento
+- Escalabres
+- Seguros 
+
+la diferencia que hay entre contenedores y VMs es que en VM necesita el SO guesped y en un contenedor solo usa los binarios Bins/Libs que necesitan nuestra app
