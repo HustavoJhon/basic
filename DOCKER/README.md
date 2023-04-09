@@ -58,6 +58,12 @@ construir y desplegar software.
 > A diferencia de una máquina virtual, que es una abstracción del hardware y emula toda una computadora (o servidor), un contenedor es una abstracción del software y éste puede empaquetar el código, el runtime necesario y las dependencias de una aplicación
 
 
-## Qué es y cómo funciona Docker
+### Qué es y cómo funciona Docker
 
 <img src="doc/img/arquitectura.png">
+
+## Contenedores
+
+```shell
+docker run hello-world
+```
