@@ -68,6 +68,24 @@ construir y desplegar software.
 docker run hello-world
 ```
 
+**Cuando listamos los contenedores (con $ docker ps), vemos unas columnas.**
+
+`CONTAINER ID`: El ID del contenedor.
+
+`IMAGE`: El nombre de la imagen.
+
+`COMMAND`: El proceso que ejecuta el contenedor al arrancar.
+
+`CREATED`: Muestra hace cuánto fue creado el contenedor.
+
+`STATUS`: El estado del proceso ejecutado por el contenedor.
+
+`PORTS`: Los puertos abiertos del contenedor.
+
+`NAMES`: El nombre del contenedor.
+
+> El modo interactivo nos permite ingresar a la interfaz de línea de comandos (CLI) del contenedor, como si ingresáramos a un servidor a través de Secure Shell. Para iniciar un contenedor con el modo interactivo, le añadimos al comando docker run el flag -it. Por ejemplo: $ docker run -it ubuntu
+
 **Que es un contenedor?**
 
 - Es una agrupación de procesos.
@@ -92,7 +110,6 @@ docker run hello-world
 
 **Estado de Docker**
 
-Comandos:
 `$ docker run hello-world` (corro el contenedor hello-world)
 
 `$ docker ps` (muestra los contenedores activos)
@@ -110,3 +127,13 @@ Comandos:
 `$ docker rm` <ID o nombre> (borro un contenedor)
 
 `$ docker container prune` (borro todos lo contenedores que esten parados)
+
+**El Modo Interactivo**
+
+`$ docker run ubuntu` (corre un ubuntu pero lo deja apagado)
+`$ docker ps -a` (lista todos los contenedores)
+`$ docker -it ubuntu` (lo corre y entro al shell de ubuntu)
+`-i: interactivo`
+`-t: abre la consola`
+
+`cat /etc/lsb-release` (veo la versión de Linux)
