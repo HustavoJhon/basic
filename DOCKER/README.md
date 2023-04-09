@@ -138,7 +138,7 @@ docker run hello-world
 
 `cat /etc/lsb-release` (veo la versión de Linux)
 
-**Ciclo de Vida de un Contenedor**
+### Ciclo de Vida de un Contenedor
 
 Cada vez que un contendor se ejecuta, en realidad lo que ejecuta es un proceso del sistema operativo. Este proceso se le conoce como _Main process_.
 
@@ -152,6 +152,7 @@ Ejemplos manejados en el video
 
 - Batch como Main process
 - Agujero negro (/dev/null) como Main process
+
 ```shell
 docker run --name alwaysup -d ubuntu tail -f /dev/null 
 ```
@@ -181,3 +182,25 @@ docker stop alwaysup
 # Es decir:
 docker stop <container_id or container_name>
 ```
+
+### Exponiendo contenedores 
+
+`$ docker run -d --name proxy nginx` (corro un nginx)
+
+`$ docker stop proxy` (apaga el contenedor)
+
+`$ docker rm proxy` (borro el contenedor)
+
+`$ docker rm -f <contenedor>` (lo para y lo borra)
+
+`$ docker run --name proxy -p 8080:80 nginx` (corro el nginx y expongo el puerto 80 del contenedor en el puerto 8080 de mi maquina pero no podre usar la terminal)
+
+`$ docker run --name proxy -d -p 8080:80 nginx` (corro un nginx y expongo el puerto 80 del contenedor en el puerto 8080 de mi máquina pero con la terminal disponible gracias a `-d`)
+
+_localhost:8080` (desde mi navegador compruebo que funcione)_
+
+`$ docker logs proxy` (veo los logs)
+
+`$ docker logs -f proxy` (enchufarme al proceso principal)
+
+`$ docker logs --tail 10 -f proxy` (veo y sigo solo las 10 últimas entradas del log)
