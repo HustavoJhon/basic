@@ -137,3 +137,47 @@ docker run hello-world
 `-t: abre la consola`
 
 `cat /etc/lsb-release` (veo la versión de Linux)
+
+**Ciclo de Vida de un Contenedor**
+
+Cada vez que un contendor se ejecuta, en realidad lo que ejecuta es un proceso del sistema operativo. Este proceso se le conoce como _Main process_.
+
+**Main process**
+Determina la vida del contenedor, un contendor corre siempre y cuando su proceso principal este corriendo.
+
+**Sub process**
+Un contenedor puede tener o lanzar procesos alternos al main process, si estos fallan el contenedor va a seguir encedido a menos que falle el main.
+
+Ejemplos manejados en el video
+
+- Batch como Main process
+- Agujero negro (/dev/null) como Main process
+```shell
+docker run --name alwaysup -d ubuntu tail -f /dev/null 
+```
+
+el ouput que te regresa es el ID del contentedor _
+
+Te puedes conectar al contenedor y hacer cosas dentro del él con el siguiente comando (sub proceso)
+
+```shell
+docker exec -it alwaysup bash
+```
+
+Se puede matar un Main process desde afuera del contenedor, esto se logra conociendo el id del proceso principal del contenedor que se tiene en la maquina. Para saberlo se ejecuta los siguientes comandos;
+
+```shell
+docker inspect --format '{{.State.Pid}}' alwaysup
+```
+
+_El output del comando es el process ID (2474) _
+
+Para matar el proceso principal del contenedor desde afuera se ejecuta el siguiente comando (solo funciona en linux)
+
+```shell
+Kill  2474
+# Si no tienes Linux, puedes parar el contenedor con: 
+docker stop alwaysup
+# Es decir:
+docker stop <container_id or container_name>
+```
