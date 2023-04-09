@@ -55,4 +55,4 @@ construir y desplegar software.
 - Escalabres
 - Seguros 
 
-la diferencia que hay entre contenedores y VMs es que en VM necesita el SO guesped y en un contenedor solo usa los binarios Bins/Libs que necesitan nuestra app
+> A diferencia de una máquina virtual, que es una abstracción del hardware y emula toda una computadora (o servidor), un contenedor es una abstracción del software y éste puede empaquetar el código, el runtime necesario y las dependencias de una aplicación
