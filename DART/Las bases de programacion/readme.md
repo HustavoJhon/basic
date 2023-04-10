@@ -80,3 +80,43 @@
     Tipo: `List`
 
     Se coloca el tipo entre `<>` y los valores entre `[]`
+
+## Tipos de datos avanzados
+
+**Uso de `var`** 
+
+- Inferencias 
+
+    Son cambios en tiempo de compilacion por la computadora.
+
+- Comodin
+
+    Es una forma de usar un comodin que permite despreocuparse por la declaracion.
+
+**`final` vs `const`**
+
+- Inmutabilidad
+
+    Son variables de solo lectura, una vez que se le asigna un valor, no puede ser cambiado.
+
+- Diferencias
+
+    `const` debe ser conocido en tiempo de compilacion, y `final` no.
+
+**Tipo `dyanmic` y su uso**
+
+- Inferencia
+
+    Es igual que el `var`, Dart infiere el tipo de dato.
+
+- Mutabilidad
+
+    Puede cambiar su tipo en cualquier momento, debe usarse solo en casos especificos, porque es mucha responsabilidad.
+
+**Diferencias**
+
+|Puede cambiar|El tipo|El valor|
+|--|--|--|
+|final/const| X | X |
+|var| X | 1 |
+|dynamic|1|1|

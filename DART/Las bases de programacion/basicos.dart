@@ -1,4 +1,6 @@
 void main() {
+// TIPOS DE DATOS BASICOS
+
 // BOOLEAN
   print("Programa para saber si estas soleando");
   bool estaSoleado = false;
