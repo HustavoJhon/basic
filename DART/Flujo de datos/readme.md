@@ -77,3 +77,36 @@ switch (expresion) {
     default:
 }
 ```
+
+## Ciclos
+
+**While**
+
+Es el ciclo mas basico, ejecuta el codigo interno mientras la expresion sea verdadera.
+
+```dart
+while (expresion) {
+    //codigo while
+}
+```
+
+**Do While**
+
+Es similar al while, sin embargo la expresion es evaluada en la segunda iteracion.
+
+```dart
+do {
+    // codigo do while
+} while (expresion)
+```
+
+**For**
+
+Permite crear un ciclo de repeticion en base a un indice que puede ser incremental.
+
+```dart
+for (int i = 0; i < x; i++) {
+    // codigo for
+}
+```
+
