@@ -242,3 +242,36 @@ Los comentarios son importantes porque nos permiten escribir descripciones en el
     `toLowerCase` : Cambia todo por minusculas.
 
     `replaceAll` : Reemplaza palabras enteras.
+
+## Conversión de tipos
+
+**String to number**
+
+- Caso
+    Cuando tenemos un numero como texto y necesitamos aplicar operaciones sobre el.
+
+- Codigo
+
+    Se utiliza el metodo `int.parse()`
+
+    Se utiliza el metodo `double.parse()`
+
+**Number to String**
+
+- Caso
+    
+    Cuando un numero debe ser convertido a un String.
+
+- Codigo
+
+    Casi todas las variables tienen un metodo `toString()` que comvierte en texto el valor.
+
+**Casos espaciales**
+
+- Caso
+
+    Cuando las conversiones no son posibles se determina un error en tiempo de ejecucion.
+
+- Ejemplo
+
+    Las aplicaciones pueden terminar abruptamente con un `Script error`
