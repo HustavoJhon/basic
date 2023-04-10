@@ -120,3 +120,63 @@
 |final/const| X | X |
 |var| X | 1 |
 |dynamic|1|1|
+
+## Manipulacion de variables
+
+**Declaracion de variables**
+
+- Se declara
+
+    Es el lugar donde la variable adquiere el nombre que la identifica y el tipo.
+
+- Ejemplo
+
+    `String nombre`
+
+    `int edad`
+
+**Inicializacion de variables**
+
+- Inicio
+
+    Es cuando la variable adquiere su valor inicial
+
+    Puede estar junto a la declaracion
+
+- Ejemplo
+
+    `String nombre = "Amanda";`
+
+    `int edad;`
+
+    `edad = 12;`
+
+**Asignacion de variables**
+
+- Reemplazo
+
+    Es cuando reemplaza el valor anterior de una variable por uno nuevo.
+
+- Ejemplo
+
+    `String nombre = "Amanda";`
+
+    `nombre = "Beto";`
+
+    `int edad = 12;`
+
+    `edad = 23;`
+
+**Incrementar o decrementar**
+
+- Operador
+
+    Los numeros pueden ser incrementados de 1 en 1 con unos operadores `++` o decrementados con `--`
+
+- Ejemplo
+
+    `int x = 5`
+
+    `x++;`
+
+    `++x;`
