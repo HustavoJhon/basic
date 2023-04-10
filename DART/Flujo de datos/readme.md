@@ -109,4 +109,12 @@ for (int i = 0; i < x; i++) {
     // codigo for
 }
 ```
+## Enumraciones
 
+Son un tipo de dato mas complejo, definido por el programador que permite dar contexto al codigo.
+
+```dart
+enum Nombre {
+    valro1, valor2, valor3
+}
+```
