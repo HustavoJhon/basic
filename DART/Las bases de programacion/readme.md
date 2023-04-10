@@ -180,3 +180,65 @@
     `x++;`
 
     `++x;`
+
+
+## String con Dart
+
+**Como comentar el codigo**
+
+Los comentarios son importantes porque nos permiten escribir descripciones en el codigo.
+
+` // para las lineas`
+
+`/* para los bloques */`
+
+**Concatenacion e Interpolacion**
+
+- Definicion 
+
+    Es la forma de unir dos String para formar uno mas grande.
+
+- Ejemplo
+
+    Concatenacion se usa el simbolo `+`
+    Interpolacion se usa el simbolo `$`
+
+**Caracteres especiales**
+
+- Definicion
+
+    Es cuando en un String es necesario poner un simbolo que rompe la forma del codigo.
+
+- Solucion
+
+    Colocar un simbolo `\` ante de ese caracter especial.
+
+**Multilinea**
+
+- Definicion 
+
+    Permite escribir varias lineas en la consola con el caracter especial `n`.
+
+- Ejemplo
+
+    Se usa dentro de un String con `\n`.
+
+    `\n` Salto de linea
+
+    `\t` Tabulado
+
+    `\r` Retorno
+
+**Funciones**
+
+- Definicion
+
+    Es una accion que aplicamos sobre una variable y nos da un resultado.
+
+- Ejemplo
+
+    `toUpperCase` : Cambia todo por mayusculas.
+
+    `toLowerCase` : Cambia todo por minusculas.
+
+    `replaceAll` : Reemplaza palabras enteras.
