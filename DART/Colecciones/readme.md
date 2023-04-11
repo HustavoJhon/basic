@@ -81,3 +81,50 @@ Por lo general solo contiene un unico tipo de dato y cada valor puede ser locaiz
 - `.remove`: Elimina un elemento del conjunto.
 
 - `.clear`: Limpia el conjunto.
+
+## Colecciones de tipo Mapa
+
+**Que es un Map**
+
+- Definicion 
+
+    Es una coleccion de pares de llave - valor, tambien se les conoce como diccionarios, donde la llave no se puede repetir.
+
+- Inicializacion
+
+    ```dart
+    var persona = {
+        nombre: "Ana",
+        edad: 12,
+    }
+    ```
+
+**Propiedades de Map**
+
+- `key`: Devuelve una lista con las llaves.
+
+- `values`: Devuelve una lista con los valores.
+
+- `isEmpty`: Devuelve true si la coleccion no tiene elementos.
+
+- `isNotEmpty`: Devuleve true si la coleccion tiene al menos un elemento.
+
+- `length`: Devuelve el tamanio de la lista.
+
+**Funciones de Map**
+
+- `addAll`: Agrega elementos a la coleccion.
+
+- `remove`: Elimina un elemento del conjunto.
+
+- `clear`: Limpia el conjunto.
+
+**Valores nulos**
+
+- Cuando aparece
+
+    Cuando el conjunto no tiene una llave asociada, retorna null.
+
+- Como lidiar con ellos
+
+    `null` es un tipo de valor que representa nada, por lo que puede ser comparado mediante un `if`.
