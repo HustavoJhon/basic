@@ -57,3 +57,27 @@ Por lo general solo contiene un unico tipo de dato y cada valor puede ser locaiz
 - `removeAt`: Elimina un elemento de una posicion especifica.
 
 - `clear`: Limpia la lista.
+
+## Coleccion de tipo Sets
+
+**Que es un Set**
+
+- Definicion 
+
+    Es parecido a una lista, con la diferencia de que NO puede tener valores duplicados.
+
+- Creacion
+
+    `List <int> = {1, 2, 3}`
+
+    `List <String> = {}`
+
+> Tienen las misma propiedades que una lista
+
+**Funciones de Set**
+
+- `.add`: Agrega un nuevo elemento al conjunto.
+
+- `.remove`: Elimina un elemento del conjunto.
+
+- `.clear`: Limpia el conjunto.
