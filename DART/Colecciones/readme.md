@@ -128,3 +128,32 @@ Por lo general solo contiene un unico tipo de dato y cada valor puede ser locaiz
 - Como lidiar con ellos
 
     `null` es un tipo de valor que representa nada, por lo que puede ser comparado mediante un `if`.
+
+## Colecciones anidadas
+
+- Cuando sucede
+
+    Es una coleccion contiene una coleccion dentro de sus valores, comun en Maps.
+
+- Ejemplo
+
+    ```dart
+    Map restaurantes = {
+        "nombre": "Pollos del monte",
+        "estrellas": [5, 4, 3, 4,2]
+    }
+    ```
+
+**Union de colecciones**
+
+- Caso 
+
+    Cuando se requiere unir el contenido de 2 o mas colecciones.
+
+- Soluciones
+
+    Usando la funcion `.addAll()`
+
+    Durante el constructor con ...
+
+    Hacer una nueva coleccion
