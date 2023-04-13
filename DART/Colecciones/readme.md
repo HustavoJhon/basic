@@ -175,5 +175,20 @@ Por lo general solo contiene un unico tipo de dato y cada valor puede ser locaiz
         "verde",
         if (agregarAmarillo) "amarillo",
         "azul"
-    ]
+    ];
+    ```
+
+**`for` entre colecciones**
+
+- Que es
+
+    Dentro de la declaracion de colecciones se puede tener un condicionador de tipo `for`.
+
+- Ejemplo
+
+    ```dart
+    var colores1 = [
+        "verde",
+        for (var color in colores2) color, "azul"
+    ];
     ```
