@@ -129,7 +129,9 @@ Por lo general solo contiene un unico tipo de dato y cada valor puede ser locaiz
 
     `null` es un tipo de valor que representa nada, por lo que puede ser comparado mediante un `if`.
 
-## Colecciones anidadas
+## Colecciones de Colecciones
+
+**Colecciones Anidadas**
 
 - Cuando sucede
 
@@ -157,3 +159,21 @@ Por lo general solo contiene un unico tipo de dato y cada valor puede ser locaiz
     Durante el constructor con ...
 
     Hacer una nueva coleccion
+
+## FLujos dentro de colecciones
+
+**`if` entre colecciones**
+
+- Que es
+
+    Dentro de la declaracion de colecciones se puede tener un condicional de tipo `if`.
+
+- Ejemplo
+
+    ```dart
+    var colores = [
+        "verde",
+        if (agregarAmarillo) "amarillo",
+        "azul"
+    ]
+    ```
