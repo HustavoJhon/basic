@@ -1,5 +1,7 @@
 # Curso de Fundamentos de Docker 
 
+> build onve run anuwhere
+
 > Docker te permite construir,
 distribuir y ejecutar cualquier
 aplicación en cualquier lado.
