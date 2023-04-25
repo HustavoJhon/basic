@@ -20,4 +20,7 @@ class Heroe {
   String toString() {
     return 'Heroe: nombre: ${this.nombre}, poder: ${this.poder}';
   }
+
+  // or
+  // String toString() => 'nombre: $nombre - poder: $poder';
 }
