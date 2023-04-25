@@ -58,3 +58,20 @@ git config --global user.email "Tu correo"
 * [Better Comments](https://marketplace.visualstudio.com/items?itemName=aaron-bond.better-comments)
 * [Pubspec Assist](https://marketplace.visualstudio.com/items?itemName=jeroen-meijer.pubspec-assist)
 </details>
+
+# Estructura de Proyecto
+
+- **.idea** _Configuracion de trabajo del editor de video_
+- **android** _aplicacion que corre en android_
+- **build** _aplicacion que corre en el emulador o simulador_
+- **ios** _ _
+- **lib** _Aqui esta las carpeta  mas importante para crear ventanas_
+- **test** _Realizar pruebas_
+- **.gitignore** _Archivo de configuracion de git para dejar de darle seguimiento_
+- **.metadata** _seguimiento a las propiedades com actualizaciones_
+- **.packages** _ _
+- **flutter_app2.iml** _datos del projecto_
+- **pubspec.lock** _de que manera es construido el projecto_
+- **pubspec.yaml** _instalar de forma remota dependencias o abilitar font ad pictures_
+    `flutter packages get`
+- **README.md** _Descripcion del projecto_
