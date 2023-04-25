@@ -1,18 +1,17 @@
 void main() {
-  String hola = saludar('Fernando', 'Hola,');
-  // asignacion con llaves
-  // String hola = saludar(nombre: 'Lucas', texto: "hola,");
-  print(hola);
+  final nombre = 'Fernando';
 
-  var mensaje = nombre();
-  print(mensaje);
+//   saludar( nombre, 'Greetings' );
+  saludar2(nombre: nombre, mensaje: 'Greetings');
 }
 
-String nombre() {
-  return "Lucas";
+void saludar(String nombre, [String mensaje = 'Hi']) {
+  print('$mensaje $nombre');
 }
 
-// si la funcion no retorna nada le colocamos void
-String saludar(String texto, String nombre) {
-  return '$texto $nombre';
+void saludar2({
+  required String nombre,
+  required String mensaje,
+}) {
+  print('$mensaje $nombre');
 }
