@@ -6,5 +6,6 @@
 [![JavaScript](https://img.shields.io/badge/Javascript-black?style=flat&logo=javascript)](https://github.com/hsutavojhon) 
 [![GO](https://img.shields.io/badge/Go-black?style=flat&logo=go)](https://github.com/hyupanqui) 
 [![HTML5](https://img.shields.io/badge/Html5-black?style=flat&logo=html5)](https://github.com/hustavoJhon) 
-
+[![DOCKER](https://img.shields.io/badge/Html5-black?style=flat&logo=docker)](https://github.com/hustavoJhon)
+[![DART](https://img.shields.io/badge/Html5-black?style=flat&logo=DART)](https://github.com/hustavoJhon)
 </div>
