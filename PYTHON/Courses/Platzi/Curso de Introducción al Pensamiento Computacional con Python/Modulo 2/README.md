@@ -95,3 +95,52 @@ Resultado
 >>> 7 % 2
 1
 ```
+
+## Asignación de variables
+
+Las variables son simplemente nombres asociados a espacios en memoria.
+Se lee de derecha a izquierda. Al contrario que la lectura normal.
+
+```py
+a = 2
+
+//A es igual a dos. Es la sentencia en español.No se lee así en programación, en términos de programación se lee:
+
+//"Estamos asignando el valor 2 a la variable a"
+//"La variable a tiene el valor 2 asignado(=)en memoria"
+
+x=4
+
+//"La variable x apunta al objeto 4 adentro (asignado,=) en memoria"
+
+z=(a*x)/2
+
+//"Z es el resultado de una expresión asignado a z"
+```
+
+Como principio se buscan dar nombres exactos a las variables para que sea legible a cualquier persona que lo lea,
+las variables tienen que tener nombres significativas para los humanos. Como si buscásemos acercar las definiciones para entender entre nosotros las instrucciones que le damos a la máquina.
+---
+- Siempre y cuando las variable son se llamen como las palabras reservadas y que respeten la forma en que cada lenguaje de programación posee sus estándares
+- Todo sea por el término: “Convention over configuration”
+
+La documentación de todo lenguaje guarda sus palabras reservadas.
+
+Podemos reasignar las variable, lo que simplemente estamos cambiando es la dirección, hacia a donde apunta memoria. El nombre de la variable no cambia, cambia es el apuntador en memoria.
+
+(ver imagen de reasignación, mirar si lo puedo hacer con goolge dirve.)
+El garbage collector es el que permite liberar el espacio de memoria para que se puedan hacer reasignaciones.
+
+- **Garbage collector:** En ciencias de la computación el garbage collector un mecanismo automático de gestión de memoria, trata de recoger la memoria que ocupaban lso objetos en memoria que ya no son usados en el programa.
+Alivia la administración manual de memoria. En C sucedía explícitamente. Por lo cual es un porceso que sucede implícitamente. Tener en cuenta que hay otras estrategias de administración de memoria y que cada una afecta el rendimiento.
+Para mayor información leer:
+
+Garbage Collector
+
+CONCLUSIÓN:
+
+- Las variables hacen los programas comprensibles
+
+- Son simplemente nombres que apuntas a memoria
+
+- Los operadores de igualdad ( = ) reciben el nombre de “Asignación”
