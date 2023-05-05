@@ -1,8 +1,14 @@
-contador = 10
-contadorx = 1
-while contador > 0:
-    print('0' * contador)
-    contador-=1
-while contadorx < 10:
-    print('0' * contadorx)
-    contadorx+=1
+x= 10
+y = 1
+while x > 0:
+    z = '0' * x
+    print(z + ' ' * y + z)
+    x -= 1
+    y += 2
+y -= 2
+x = 1
+while x < 10:
+    z = '0' * x
+    print(z + ' ' * y + z)
+    x += 1
+    y -= 2
