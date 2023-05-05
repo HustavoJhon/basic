@@ -299,3 +299,34 @@ Escoge un entero: 4
 Escoge otro entero: 4
 #Los 2 numeros son iguales.
 ```
+
+
+## Iteraciones
+
+En esta clase vimos que los iteradores son estructuras de control que me permiten llevar un flujo siempre que una condición se cumpla. Si esta condición se cumple eternamente, y no le decimos al programa que se detenga se generará un infinit loop.
+
+Adjunto el código de esta clase donde vemos un ciclo While anidado dentro de otro.
+```py
+contador_externo=0
+contador_interno=0
+
+while contador_externo <5:
+    while contador_interno <6:
+        print(contador_externo,contador_interno)
+        contador_interno+=1
+        # contador_interno += 1 --> Si eliminamos esto, habrá un bucle infinito de ceros porque el contador nunca avanza,
+        # y es el contador interno el que define el externo.
+
+        if contador_interno >=3:
+            break # Esto es un break statement qu eme dice que cuando mi contador interno sea 3, pare.
+            # Solo debe parar el contador interno, pues el externo tiene un contador por si mismo y seguirá la ejecución
+
+    contador_externo+=1
+    # contador_externo += 1 --> Si elimino esto, al ser el contador externo siempre 0, le estoy diciendo que vaya hasta infinito, y el código interno
+    # se seguirá ejecutando de 0 a 5 indefinidamente
+    contador_interno=0
+    # contador_interno=0  --->Eliminar este implica que contador_interno solo tendrá la oportunidad de ejecutarse de 0 a 5.
+
+# El código en general tiene dos mecanismos uno interior que hace ciclos cortos, y uno exterior que envuelve los ciclos.
+# Son estructuras de control anidadas.
+```
