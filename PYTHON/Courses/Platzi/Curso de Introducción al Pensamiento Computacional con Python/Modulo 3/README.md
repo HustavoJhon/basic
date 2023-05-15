@@ -32,3 +32,21 @@ nombre_completo(apellido="Harrinson", nombre="Quintero")
 
 ## Scope o Alcance
 
+in Python , the **LEGB rule** is usde to decide the order in whitch the namespace are to be searched for scope resolution.
+The scopes are listed below in terms of hierarchy(highest to lowest/narrowest to broadest):
+- Local(L): Defined inside function/class
+- Enclosed(E): Defined inside enclosing functions(Nested funtion concept)
+- Global(G): defined at the uppermodt level
+- Built-in(B): Reserverd names in Python builtin modules
+
+## Especificaciones del codigo
+
+**Documentacion:**
+
+1. La primera linea debe ser un resumen, importante que quepa en una sola linea y este separada del resto de docstrings por un espacion en blanco.
+
+2. El resto de la cadena de documentación debe describir el comportamiento de la función.
+
+3. Se recomienda dejar una línea en blanco antes de las triples comillas que cierran la cadena de documentación.
+
+> Fuente: http://edupython.blogspot.com/2013/12/documentando-programas-en-python.html
