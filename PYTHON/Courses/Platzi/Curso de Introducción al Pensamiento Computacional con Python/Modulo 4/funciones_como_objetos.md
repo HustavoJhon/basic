@@ -56,3 +56,5 @@ def aplicar_operaciones(num):
 [2, -2.0]
 ```
 Como pudimos ver, las funciones son objetos muy versátiles que nos permiten tratarlas de diversas maneras y que nos permiten añadir capas adicionales de abstracción a nuestro programa. Compártenos cómo te imaginas que estas capacidades de Python te pueden ayudar a escribir mejores programas.
+
+https://docs.hektorprofe.net/python/funcionalidades-avanzadas/funciones-lambda/
