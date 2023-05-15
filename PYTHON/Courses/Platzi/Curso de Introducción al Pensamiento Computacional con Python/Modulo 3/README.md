@@ -29,3 +29,6 @@ nombre_completo("Harrinson", "Quintero")
 nombre_completo("Harrinson", "Quintero", inverso=True)
 nombre_completo(apellido="Harrinson", nombre="Quintero")
 ```
+
+## Scope o Alcance
+
