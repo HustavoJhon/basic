@@ -91,5 +91,40 @@ my_list = list(range(100))
     print(f'Mi lista con todos sus valores pares:\n {pares}')
 ```
 
-
 https://docs.python.org/3/tutorial/datastructures.html#more-on-lists
+
+## Diccionarios
+
+- Son como listas, pero en lugar de usar índices utilizan llaves, y no tienen un orden especifico.
+- Los diccionarios son mutables y pueden iterarse.
+- Es muy eficiente acceder a sus valores, mucho mas que con una lista.
+- Para iterar en un diccionario:
+    - Podemos iterar a lo largo de los valores con dict.keys()
+    - A lo largo de las llaves dict.values()
+    - Por llave y valor dict.items(), (tienes que hacer unpacking)
+```py
+#Estructura general de un diccionario.
+my_dict = {'key1' : 'value1',
+					 'key2' : 'value2',
+					 'key3' : 'value3'}
+
+value_3 = my_dict['key3']  #Para acceder a un valor
+#Para revisar si hay una entrada
+'key5' in my_dict
+
+#Regresa otra cosa si no existe
+my_dict.get('key4', 'No key in dict')
+
+#Para reasiganar un valor: 
+my_dict['key2'] = 'new_value2'
+
+#Nuevo valor en diccionario
+my_dict['key4'] = 'value4'
+
+#Para borrar valor
+del my_dict['key1']
+```
+Para hacer dictionary comprehension:
+```py
+dict_variable = {key:value for (key,value) in dictonary.items()}
+```
