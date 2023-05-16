@@ -105,8 +105,8 @@ https://docs.python.org/3/tutorial/datastructures.html#more-on-lists
 ```py
 #Estructura general de un diccionario.
 my_dict = {'key1' : 'value1',
-					 'key2' : 'value2',
-					 'key3' : 'value3'}
+            'key2' : 'value2',
+            'key3' : 'value3'}
 
 value_3 = my_dict['key3']  #Para acceder a un valor
 #Para revisar si hay una entrada
@@ -128,3 +128,4 @@ Para hacer dictionary comprehension:
 ```py
 dict_variable = {key:value for (key,value) in dictonary.items()}
 ```
+
