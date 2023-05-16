@@ -1,4 +1,6 @@
 # Curso de Introducción al Pensamiento Computacional con Python
+ 
+> https://github.com/karlbehrensg/introduccion-pensamiento-computacional
 
 > Comienza tu camino en el desarrollo de software con el lenguaje de programación Python. Entiende la estructura de pensamiento necesaria para resolver problemas en programación. Domina las estructuras de control para crear soluciones. Conoce las características de Python que te permiten reutilizar código. Prueba tu código e implementa correcciones y mejoras.
 
