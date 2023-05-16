@@ -49,3 +49,18 @@ function buscaPais(paises, pais) {
 Como puedes ver, el código de Python accede directamente a la llave y únicamente si dicho acceso falla, entonces se captura la excepción y se provee el código necesario. En el caso de JavaScript, se verifica primero que la llave exista en el objeto y únicamente con posterioridad se accede.
 
 Es importante resaltar que ambos estilos pueden utilizarse en Python, pero el estilo EAFP es mucho más "pythonico".
+
+## Afirmaciones
+
+Es un mecanismo por el cuál podemos determinar si una función se cumple o no se cumple. Y poder seguir adelante con la ejecución de nuestro programa o terminar dicha ejecución.
+
+Programación defensiva
+Pueden utilizarse para verificar que los tipos sean correctos en una función.
+También sirven para debuguear.
+Para generarlas tenemos que utlizar el keyword `assert` y dar una expresión boleana y un mensaje de error
+
+- Programacion defensiva
+- Pueden utilizar para verificar que los tipos sean correctos en una funcion
+- Tambien sirven para debuguear
+
+https://www.programiz.com/python-programming/assert-statement
