@@ -17,7 +17,7 @@ word = "Hello world"
 dir(word)
 ```
 
-**DOC**
+**DOC CODE**
 
 ```python
 def my_function():
@@ -26,3 +26,9 @@ def my_function():
 
 help(my_function)
 ```
+
+## Operaciones con strings y el comando Update
+
+En esta clase seguiremos construyendo nuestro proyecto PlatziVentas, agregaremos el comando update para poder actualizar nuestros clientes y pondremos en práctica lo aprendido en clases anteriores sobre Strings.
+
+https://github.com/platzi/curso_Python3/tree/8-while-loops
