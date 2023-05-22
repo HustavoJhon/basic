@@ -1,7 +1,7 @@
 from rich.console import Console 
 from rich.theme import Theme 
-from rich.traceback import install
-install()
+from rich.table import Table
+
 
 
 custom_theme = Theme({
@@ -9,82 +9,89 @@ custom_theme = Theme({
     "bad": "bold red"
 })
 
+# console = Console(theme=custom_theme)   
+
+# console = Console()
 
 clients = 'pablo, ricardo, jose, roberto'
 
-try:
         
-    def create_client(clients_name):
-        global clients
+def create_client(clients_name):
+    global clients
+    
+    if clients_name not in clients:
+        clients += clients_name
+        _add_comma()
+    else:
+        print('Client already is in the client\'s list')
+
+
+def list_clients():
+    global clients
+    print(clients)
+    
+
+def update_client(client_name, update_client_name):
+    global clients
+    
+    if client_name in clients:
+        clients = clients.replace(client_name + ',' , update_client_name)
+    else:
+        print('Client is not in clients list')
+
+
+def delete_client(client_name):
+    global clients
+    
+    if client_name in clients:
+        clients = clients.replace(client_name + ',', '')
+    else:
+        print("Client is not in clients list")
         
-        if clients_name not in clients:
-            clients += clients_name
-            _add_comma()
+
+def search_client(client_name):
+    # global clients
+    
+    clients_list = clients.split(',')
+    
+    for client in clients_list:
+        if client != client_name:
+            continue
         else:
-            print('Client already is in the client\'s list')
-
-
-    def list_clients():
-        global clients
-        print(clients)
+            return True
         
 
-    def update_client(client_name, update_client_name):
-        global clients
-        
-        if client_name in clients:
-            clients = clients.replace(client_name + ',' , update_client_name)
-        else:
-            print('Client is not in clients list')
+def _add_comma():
+    global clients
+    clients += ', '
+    
+console = Console(theme=custom_theme)  
+
+def _print_welcome():
+    welcome = 'WELCOME TO PLATZI VENTAS '
+    # style="bold underline red on black"
+
+    table = Table(title = welcome)
+
+    table.add_column("🔍", justify="right", style="cyan")
+    table.add_column("Option", justify="left", style="magenta")
+
+    table.add_row("[bold yellow][C][/]", "create clients")
+    table.add_row("[bold green][R][/]", "read clients")
+    table.add_row("[bold blue][U][/]", "update clients")
+    table.add_row("[bold red][D][/]", "delete clients")
+    table.add_row("")
+    table.add_row("[bold purple][L][/]", "list clients")
+    table.add_row("[bold purple][S][/]", "search clients")
+
+    console.print(table)
 
 
-    def delete_client(client_name):
-        global clients
-        
-        if client_name in clients:
-            clients = clients.replace(client_name + ',', '')
-        else:
-            print("Client is not in clients list")
-            
 
-    def search_client(client_name):
-        # global clients
-        
-        clients_list = clients.split(',')
-        
-        for client in clients_list:
-            if client != client_name:
-                continue
-            else:
-                return True
-            
 
-    def _add_comma():
-        global clients
-        clients += ', '
-    console = Console(theme=custom_theme)   
+def _get_client_name():
+    return input("What is the client name? ")
 
-    def _print_welcome():
-        console.print(' WELCOME TO PLATZI VENTAS ', style="bold underline red on black")
-        print('_________________________________________')
-        console.print(':penguin: What would you like to do today?\n', style="good")
-        
-        console.print('[bold yellow][C][/]reate client')
-        console.print('[bold green][R][/]ead client')
-        console.print('[bold blue][U][/]pdate client')
-        console.print('[bold red][D][/]elete client')
-        console.print('---', style="bad")
-        console.print('[bold purple][L][/]ist clients')
-        console.print('[bold purple][S][/]earch client')
-        print('_________________________________________')
-
-    def _get_client_name():
-        return input("What is the client name? ")
-
-except:
-    console.print_exception()
-
-# console.save_html("demo.html")
 
 if __name__ == '__main__':
     _print_welcome()
