@@ -45,3 +45,14 @@ https://github.com/platzi/curso_Python3/tree/8-while-loops
     my_name[::2]
     my_name[::-1]
     ```
+## For loops
+
+- Los **for** loops permiten ciclar a lo largo de una secuencia
+- Se usan cuando se quieren ejecutar un conjunto de instrucciones varias veces
+    - Esto tambien se llama **iteracion**
+- Se puede utilizar en keyword **continue** para saltarse los statements restantes y pasar a la siguiente iteracion
+- Ej.
+    ```py
+    for i in range(1000):
+        print(i)
+    ```

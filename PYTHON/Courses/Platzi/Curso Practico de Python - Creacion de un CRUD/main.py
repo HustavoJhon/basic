@@ -1,52 +1,90 @@
-clients = 'pablo, ricardo,'
-
-def create_client(clients_name):
-    global clients
-    
-    if clients_name not in clients:
-        clients += clients_name
-        _add_comma()
-    else:
-        print('Client already is in the client\'s list')
+from rich.console import Console 
+from rich.theme import Theme 
+from rich.traceback import install
+install()
 
 
-def list_clients():
-    global clients
-    print(clients)
-    
-
-def update_client(client_name, update_client_name):
-    global clients
-    
-    if client_name in clients:
-        clients = clients.replace(client_name + ',' , update_client_name)
-    else:
-        print('Client is not in clients list')
+custom_theme = Theme({
+    "good": "green",
+    "bad": "bold red"
+})
 
 
-def delete_client(client_name):
-    global clients
-    
-    if client_name in clients:
-        clients = clients.replace(client_name + ',', '')
-    else:
-        print("Client is not in clients list")
+clients = 'pablo, ricardo, jose, roberto'
 
-def _add_comma():
-    global clients
-    clients += ', '
+try:
+        
+    def create_client(clients_name):
+        global clients
+        
+        if clients_name not in clients:
+            clients += clients_name
+            _add_comma()
+        else:
+            print('Client already is in the client\'s list')
 
 
-def _print_welcome():
-    print('WELCOME TO PLATZI VENTAS')
-    print('*'*30)
-    print('What would you like to do today?')
-    print('[C]reate client')
-    print('[U]pdate client')
-    print('[D]elete client')
+    def list_clients():
+        global clients
+        print(clients)
+        
 
-def _get_client_name():
-    return input("Wha is the client name? ")
+    def update_client(client_name, update_client_name):
+        global clients
+        
+        if client_name in clients:
+            clients = clients.replace(client_name + ',' , update_client_name)
+        else:
+            print('Client is not in clients list')
+
+
+    def delete_client(client_name):
+        global clients
+        
+        if client_name in clients:
+            clients = clients.replace(client_name + ',', '')
+        else:
+            print("Client is not in clients list")
+            
+
+    def search_client(client_name):
+        # global clients
+        
+        clients_list = clients.split(',')
+        
+        for client in clients_list:
+            if client != client_name:
+                continue
+            else:
+                return True
+            
+
+    def _add_comma():
+        global clients
+        clients += ', '
+    console = Console(theme=custom_theme)   
+
+    def _print_welcome():
+        console.print(' WELCOME TO PLATZI VENTAS ', style="bold underline red on black")
+        print('_________________________________________')
+        console.print(':penguin: What would you like to do today?\n', style="good")
+        
+        console.print('[bold yellow][C][/]reate client')
+        console.print('[bold green][R][/]ead client')
+        console.print('[bold blue][U][/]pdate client')
+        console.print('[bold red][D][/]elete client')
+        console.print('---', style="bad")
+        console.print('[bold purple][L][/]ist clients')
+        console.print('[bold purple][S][/]earch client')
+        print('_________________________________________')
+
+    def _get_client_name():
+        return input("What is the client name? ")
+
+except:
+    console.print_exception()
+
+# console.save_html("demo.html")
 
 if __name__ == '__main__':
     _print_welcome()
@@ -58,14 +96,29 @@ if __name__ == '__main__':
         clients_name = _get_client_name()
         create_client(clients_name)
         list_clients()
+        
     elif command == 'D':
         clients_name = _get_client_name()
         delete_client(clients_name)
         list_clients()
+        
     elif command == 'U':
         clients_name = _get_client_name()
         update_client_name = input('What is the updated client name ')
         update_client(clients_name, update_client_name)
         list_clients()
+        
+    elif command == 'L':
+        list_clients()
+        
+    elif command == 'S':
+        client_name = _get_client_name()
+        found = search_client(client_name)
+        
+        if found:
+            print('The client is in the client\'s list')
+        else:
+            print('The client: {} is not in our clients\'s list'.format(client_name))
+
     else:
         print("Invalid command")
