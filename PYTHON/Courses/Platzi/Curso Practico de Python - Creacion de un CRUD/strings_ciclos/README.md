@@ -32,3 +32,16 @@ help(my_function)
 En esta clase seguiremos construyendo nuestro proyecto PlatziVentas, agregaremos el comando update para poder actualizar nuestros clientes y pondremos en práctica lo aprendido en clases anteriores sobre Strings.
 
 https://github.com/platzi/curso_Python3/tree/8-while-loops
+
+## Operaciones con strins: Slices en python
+- Python tinene una de las sintazis mas poderosas para manipular secuencias
+- Esta sintaxis se llama **slice** (rebanada en spanish)
+- Ejm.
+    ```py
+    my_name = 'David'
+    my_name[0]
+    my_name[-1]
+    my_name[0:3]
+    my_name[::2]
+    my_name[::-1]
+    ```
