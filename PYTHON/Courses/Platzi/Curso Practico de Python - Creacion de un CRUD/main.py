@@ -1,6 +1,9 @@
 from rich.console import Console 
 from rich.theme import Theme 
 from rich.table import Table
+from rich.columns import Columns
+from rich.panel import Panel
+from rich.markdown import Markdown
 
 
 
