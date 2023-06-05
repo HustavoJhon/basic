@@ -26,7 +26,7 @@ def create_client(clients_name):
         clients += clients_name
         _add_comma()
     else:
-        print('Client already is in the client\'s list')
+        console.print('Client already is in the client\'s list')
 
 
 def list_clients():
@@ -90,8 +90,6 @@ def _print_welcome():
     console.print(table)
 
 
-
-
 def _get_client_name():
     return input("What is the client name? ")
 
@@ -124,11 +122,12 @@ if __name__ == '__main__':
     elif command == 'S':
         client_name = _get_client_name()
         found = search_client(client_name)
+        list_clients()
         
         if found:
-            print('The client is in the client\'s list')
+            console.print('[good]The client is in the client\'s list[/good]')
         else:
-            print('The client: {} is not in our clients\'s list'.format(client_name))
+            console.print('[bad]The client: {} is not in our clients\'s list[/bad]'.format(client_name))
 
     else:
-        print("Invalid command")
+        console.print("[bad]Invalid command[/bad]")
