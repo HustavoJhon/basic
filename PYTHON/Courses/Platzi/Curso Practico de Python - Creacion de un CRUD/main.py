@@ -16,32 +16,36 @@ custom_theme = Theme({
 
 # console = Console()
 
-clients = 'pablo, ricardo, jose, roberto'
+clients = 'pablo,ricardo,jose,roberto,'
 
+#* CREATE CLIENTS
         
 def create_client(clients_name):
     global clients
     
-    if clients_name not in clients:
-        clients += clients_name
+    if client_name not in clients:
+        clients += client_name
         _add_comma()
     else:
         console.print('Client already is in the client\'s list')
 
+#* LIST CLIENTS
 
 def list_clients():
     global clients
     print(clients)
     
+#* UPDATE CLIENTS
 
-def update_client(client_name, update_client_name):
+def update_client(client_name, updated_name):
     global clients
     
     if client_name in clients:
-        clients = clients.replace(client_name + ',' , update_client_name)
+        clients = clients.replace(client_name + ',' , updated_name + ',')
     else:
-        print('Client is not in clients list')
+        print('Client not in clients list')
 
+#* DELETE CLIENTS
 
 def delete_client(client_name):
     global clients
@@ -51,12 +55,11 @@ def delete_client(client_name):
     else:
         print("Client is not in clients list")
         
+#* SEARCH CLIENTS
 
 def search_client(client_name):
-    # global clients
-    
     clients_list = clients.split(',')
-    
+
     for client in clients_list:
         if client != client_name:
             continue
@@ -101,17 +104,17 @@ if __name__ == '__main__':
     command = command.upper()
 
     if command == 'C':
-        clients_name = _get_client_name()
-        create_client(clients_name)
+        client_name = _get_client_name()
+        create_client(client_name)
         list_clients()
         
     elif command == 'D':
-        clients_name = _get_client_name()
-        delete_client(clients_name)
+        client_name = _get_client_name()
+        delete_client(client_name)
         list_clients()
         
     elif command == 'U':
-        clients_name = _get_client_name()
+        client_name = _get_client_name()
         update_client_name = input('What is the updated client name ')
         update_client(clients_name, update_client_name)
         list_clients()
