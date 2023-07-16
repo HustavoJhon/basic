@@ -6,17 +6,12 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 
 
-
 custom_theme = Theme({
     "good": "green",
     "bad": "bold red"
 })
 
-# console = Console(theme=custom_theme)   
-
-# console = Console()
-
-clients = 'pablo,ricardo,jose,roberto,'
+clients = ['pablo','ricardo','jose','roberto']
 
 #* CREATE CLIENTS
         
@@ -24,16 +19,15 @@ def create_client(clients_name):
     global clients
     
     if client_name not in clients:
-        clients += client_name
-        _add_comma()
+        clients.append(client_name)
     else:
         console.print('Client already is in the client\'s list')
 
 #* LIST CLIENTS
 
 def list_clients():
-    global clients
-    print(clients)
+    for idx, client in enumerate(clients):
+        print('{}: {}'.format(idx, client))
     
 #* UPDATE CLIENTS
 
@@ -41,7 +35,8 @@ def update_client(client_name, updated_name):
     global clients
     
     if client_name in clients:
-        clients = clients.replace(client_name + ',' , updated_name + ',')
+        index = clients.index(client_name)
+        clients[index] = updated_name
     else:
         print('Client not in clients list')
 
@@ -51,25 +46,18 @@ def delete_client(client_name):
     global clients
     
     if client_name in clients:
-        clients = clients.replace(client_name + ',', '')
+        clients.remove(client_name)
     else:
         print("Client is not in clients list")
         
 #* SEARCH CLIENTS
 
 def search_client(client_name):
-    clients_list = clients.split(',')
-
-    for client in clients_list:
+    for client in clients:
         if client != client_name:
             continue
         else:
             return True
-        
-
-def _add_comma():
-    global clients
-    clients += ', '
     
 console = Console(theme=custom_theme)  
 
@@ -116,7 +104,7 @@ if __name__ == '__main__':
     elif command == 'U':
         client_name = _get_client_name()
         update_client_name = input('What is the updated client name ')
-        update_client(clients_name, update_client_name)
+        update_client(client_name, update_client_name)
         list_clients()
         
     elif command == 'L':
