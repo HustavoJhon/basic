@@ -1,3 +1,7 @@
+import sys 
+
+from tabulate import tabulate
+
 from rich.console import Console 
 from rich.theme import Theme 
 from rich.table import Table
@@ -6,28 +10,62 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 
 
+
 custom_theme = Theme({
     "good": "green",
     "bad": "bold red"
 })
 
-clients = ['pablo','ricardo','jose','roberto']
+clients = [
+    {
+        'name': 'Pablo',
+        'company': 'Google',
+        'email': 'pablo@google.com',
+        'position': 'Software ingineer'
+    },
+    {
+        'name': 'Ricardo',
+        'company': 'Meta',
+        'email': 'ricardo@meta.com',
+        'position': 'Graphic Designer'
+    },
+    {
+        'name': 'Jose',
+        'company': 'Twitter',
+        'email':'jose@twitter.com',
+        'position': 'Data engineer'
+    },
+    {
+        'name': 'Roberto',
+        'company': 'Apple',
+        'email': 'roberto@apple.com',
+        'position': 'Web Developer'
+    }
+]
+    
 
 #* CREATE CLIENTS
         
-def create_client(clients_name):
+def create_client(client):
     global clients
     
-    if client_name not in clients:
-        clients.append(client_name)
+    if client not in clients:
+        clients.append(client)
     else:
         console.print('Client already is in the client\'s list')
 
 #* LIST CLIENTS
 
 def list_clients():
-    for idx, client in enumerate(clients):
-        print('{}: {}'.format(idx, client))
+    # for idx, client in enumerate(clients):
+        # print('{uid} | {name} | {company} | {email} | {position}'.format(
+        #     uid=idx,
+        #     name=client['name'],
+        #     company=client['company'],
+        #     email=client['email'],
+        #     position=client['position']
+        # ))
+    print(tabulate(clients, headers='keys', tablefmt='fancy_grid', showindex=True))
     
 #* UPDATE CLIENTS
 
@@ -59,7 +97,33 @@ def search_client(client_name):
         else:
             return True
     
+    
+def _get_client_field(field_name):
+    field = None 
+    
+    while not field:
+        field = input('What is the client {}'.format(field_name))
+
+    return field
+
+def _get_client_name():
+    client_name = None
+
+    while not client_name:
+        client_name = input('What is the client name?')
+
+        if client_name == 'exit':
+            client_name = None 
+            break
+    if not client_name:
+        sys.exit()
+        
+    return client_name
+
+    # return input("What is the client name? ")
+
 console = Console(theme=custom_theme)  
+
 
 def _print_welcome():
     welcome = 'WELCOME TO PLATZI VENTAS '
@@ -81,10 +145,6 @@ def _print_welcome():
     console.print(table)
 
 
-def _get_client_name():
-    return input("What is the client name? ")
-
-
 if __name__ == '__main__':
     _print_welcome()
 
@@ -92,6 +152,12 @@ if __name__ == '__main__':
     command = command.upper()
 
     if command == 'C':
+        client = {
+            'name' : _get_client_field('name'),
+            'company': _get_client_field('company'),
+            'email': _get_client_field('email'),
+            'position': _get_client_field('position'),
+        }
         client_name = _get_client_name()
         create_client(client_name)
         list_clients()
