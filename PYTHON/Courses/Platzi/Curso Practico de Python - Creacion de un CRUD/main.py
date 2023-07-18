@@ -65,7 +65,13 @@ def list_clients():
         #     email=client['email'],
         #     position=client['position']
         # ))
-    print(tabulate(clients, headers='keys', tablefmt='fancy_grid', showindex=True))
+    print(tabulate(
+        clients, 
+        headers='keys', 
+        tablefmt='fancy_grid', 
+        showindex=True
+        )
+    )
     
 #* UPDATE CLIENTS
 
