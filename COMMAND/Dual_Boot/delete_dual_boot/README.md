@@ -16,6 +16,8 @@
 
 9. salimos de diskpart con `exit`
 
+> open teminal cmd > run administrator
+
 10. seleccionamos el boot `bcdboot c:\windows /s z: /f all`
 
 11. listamos todos los firmware `bcdedit.exe /enum firmware`
