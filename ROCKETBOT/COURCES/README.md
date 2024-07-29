@@ -2,9 +2,7 @@
 
 > https://github.com/ital08/python-flask-demo-app
 
-[![PYTHON](https://img.shields.io/badge/python-black?style=for-the-badge&logo=python)](https://github.com/hustavojhon)
-[![DOCKER](https://img.shields.io/badge/docker-black?style=for-the-badge&logo=docker)](https://github.com/hustavojhon) 
-[![AZURE](https://img.shields.io/badge/Azure-black?style=for-the-badge&logo=microsoft-azure)](https://github.com/hustavojhon)
+[![PYTHON](https://img.shields.io/badge/python-black?style=for-the-badge&logo=python)](https://github.com/hustavojhon) [![DOCKER](https://img.shields.io/badge/docker-black?style=for-the-badge&logo=docker)](https://github.com/hustavojhon) [![AZURE](https://img.shields.io/badge/Azure-black?style=for-the-badge&logo=microsoft-azure)](https://github.com/hustavojhon)
 
 Desplegar una aplicación Flask en Azure Kubernetes Service (AKS) utilizando secretos almacenados en Kubernetes incluye procesos como la construcción de una imagen Docker, su almacenamiento en Azure Container Registry (ACR) y la creación y configuración de un clúster AKS. Las ventajas que ofrece esto son la escalabilidad y gestión simplificada, la seguridad mejorada al utilizar secretos de Kubernetes para gestionar información sensible, y el monitoreo detallado con herramientas como Azure Monitor y Prometheus. AKS permite escalar automáticamente las aplicaciones según la demanda y facilita la recuperación ante fallos. Para este despliegue se utilizan diversas herramientas como Azure CLI para crear y gestionar recursos de Azure, Docker para construir, etiquetar y subir imágenes de contenedores a ACR, y Kubernetes para orquestar los contenedores y servicios. Azure Monitor se utiliza para supervisar el rendimiento del clúster, mientras que Prometheus y Grafana ofrecen monitoreo avanzado y visualización de métricas con dashboards.
 #### Uso de Herramientas
