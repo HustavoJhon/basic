@@ -41,3 +41,11 @@ If you are interested in learning about algorithms, [TheAlgorithms/Python](https
 ### 10. vinta/awesome-python
  
 Lastly, [vinta/awesome-python](https://github.com/vinta/awesome-python) repository is a collection of remarkable Python frameworks, libraries, software, and resources. It is an excellent source for exploring Python tools and libraries that can aid you in your projects and learning journey. Whether you seek web frameworks, data analysis tools, or anything Python-related, you are likely to find it here.
+
+### Github
+
+1. https://github.com/TheAlgorithms/Python
+2. https://github.com/EbookFoundation/free-programming-books
+3. https://github.com/mgaitan/curso-python-cientifico
+4. https://github.com/CaptCorpMURICA/100DaysPython
+5. https://github.com/talkpython/100daysofcode-with-python-course
