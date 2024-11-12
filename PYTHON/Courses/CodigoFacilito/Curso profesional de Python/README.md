@@ -1,2 +1,0 @@
-# Curso profesional de Python
-

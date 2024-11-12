@@ -1,4 +1,0 @@
-# FUNDAMENTOS 
-
-**Datos simples**
-
