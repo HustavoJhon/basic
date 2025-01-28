@@ -2,7 +2,7 @@
 <!-- PROJECT LOGO -->
 <div aling="center">
     <a href="https://github.com/hustavojhon">
-        <img src="./assets/" alt="Logo" width="100" height="100">
+        <img src="./assets/ghost.svg" alt="Logo" width="100" height="100">
     </a>
     <h3 align="center">basic</h3>
     <p align="center">
