@@ -1,0 +1,41 @@
+# Dependencies (if any in future)
+/vendor/
+/node_modules/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+error.log
+access.log
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Docker volumes (keep data out of repo)
+mysql_data/
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# PHP specific
+.php-cs-fixer.cache
+.phpunit.result.cache
+
+# Keep webfonts and images - they're part of the template
+# But ignore large unoptimized files if any
+*.psd
+*.ai
+*.sketch
+
+# Composer
+composer.lock

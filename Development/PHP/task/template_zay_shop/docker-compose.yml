@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Servicio MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: zay_shop_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: storeonline
+      MYSQL_USER: usuario
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./DataBase/storeonline.sql:/docker-entrypoint-initdb.d/storeonline.sql
+    networks:
+      - zay_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+
+  # Servicio PHP/Apache
+  php:
+    build: .
+    container_name: zay_shop_php
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: usuario
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: storeonline
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    networks:
+      - zay_network
+
+volumes:
+  mysql_data:
+
+networks:
+  zay_network:
+    driver: bridge
