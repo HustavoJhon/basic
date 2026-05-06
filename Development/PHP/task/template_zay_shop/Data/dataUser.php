@@ -14,13 +14,10 @@ class DataUser {
         try {
             $conexion = Conexion::conectar();
             
-            // Hash de la contraseña
-            $passHash = password_hash($pass, PASSWORD_BCRYPT);
-            
-            // Query con prepared statement
+            // Contraseña en texto plano
             $sql = "INSERT INTO clientes (usuario, contrasena, estado) VALUES (?, ?, 1)";
             $stmt = $conexion->prepare($sql);
-            $stmt->execute([$usuario, $passHash]);
+            $stmt->execute([$usuario, $pass]);
             
             return true;
         } catch (PDOException $e) {
@@ -40,13 +37,13 @@ class DataUser {
             $conexion = Conexion::conectar();
             
             // Query con prepared statement
-            $sql = "SELECT * FROM clientes WHERE usuario = ? AND estado = 1";
+            $sql = "SELECT * FROM clientes WHERE usuario = ? AND contrasena = ? AND estado = 1";
             $stmt = $conexion->prepare($sql);
-            $stmt->execute([$usuario]);
+            $stmt->execute([$usuario, $pass]);
             
             $usuario_bd = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($usuario_bd && password_verify($pass, $usuario_bd['contrasena'])) {
+            if ($usuario_bd) {
                 return $usuario_bd;
             }
             
@@ -121,10 +118,9 @@ class DataUser {
     public function updatePassword($id, $pass) {
         try {
             $conexion = Conexion::conectar();
-            $passHash = password_hash($pass, PASSWORD_BCRYPT);
             $sql = "UPDATE clientes SET contrasena = ? WHERE id = ?";
             $stmt = $conexion->prepare($sql);
-            $stmt->execute([$passHash, $id]);
+            $stmt->execute([$pass, $id]);
             return true;
         } catch (PDOException $e) {
             error_log("Error al actualizar contraseña: " . $e->getMessage());

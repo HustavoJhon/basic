@@ -17,14 +17,14 @@ CREATE TABLE clientes (
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- USUARIO DE PRUEBA (password: 123456 - hash bcrypt)
+-- USUARIO DE PRUEBA (password: 123456)
 INSERT INTO clientes (nombre, apellidos, email, usuario, contrasena, estado)
 VALUES (
     'Admin',
     'Principal',
     'admin@store.com',
     'admin',
-    '$2y$10$wH8Q0PqQxgX6k6YyYg4T5e6l9Z0g7zZ8e5d1Yw0lXq7mR5Q8vQZbK',
+    '123456',
     1
 );
 
