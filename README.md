@@ -1,33 +1,61 @@
 <a id="readme-top"></a>
 
-<!-- ================== HEADER ================== -->
 <div align="center">
 
-![banner](./assets/banner.svg)
+<br />
+<div align="center">
+  <a href="https://github.com/hustavojhon/">
+      <img src="./assets/ghost.svg" alt="Logo" width="80" height="80">
+  </a>
+  <h3 align="center">basic</h3>
+  <p align="center">
+    Welcome to my basic project repository.
+    <br />
+    <a href="https://github.com/hustavojhon/"><strong>Explore the directories »<</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/hustavojhon/basic/resources">resources</a> 
+    ·
+    <a href="https://github.com/hustavojhon/basic/dev">dev</a> 
+    ·
+    <a href="https://github.com/hustavojhon/basic/tools">tools</a> 
+  </p>
 
-### 🧠 Mi repositorio de aprendizaje continuo
-
-> Documentación, resúmenes y ejercicios de todo lo que aprendo — desde cursos, tutoriales y práctica personal.
-
+[![Discord](https://img.shields.io/badge/Discord-5865F2.svg?style=for-the-badge&logo=Discord&logoColor=white)](./resources/development/Python/)
 [![stars](https://img.shields.io/github/stars/hustavojhon/basic?style=for-the-badge&logo=github&label=Stars&color=F5C518)](#)
 [![following](https://img.shields.io/github/followers/hustavojhon?style=for-the-badge&logo=github&label=Following&color=FF6B6B)](#)
 [![license](https://img.shields.io/github/license/hustavojhon/basic?style=for-the-badge&logo=scale&color=6BCB77)](#)
-
 </div>
 
 ---
 
-## Tabla de contenidos
-
-- [ Estructura del repositorio](#-estructura-del-repositorio)
-- [ Tecnologías](#-tecnologías)
-- [ Contenido por sección](#-contenido-por-sección)
-- [ Recursos de aprendizaje](#-recursos-de-aprendizaje)
-- [ Cómo contribuir](#-cómo-contribuir)
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+    <ol>
+      <li>
+        <a href="#about-the-project">About The Project</a>
+        <lu>
+          <li>
+            <a href="#built-with">Built Width</a>
+          </li>
+        </lu>
+      </li>
+      <li><a href="#structure">Structure</a></li>
+      <li><a href="#usage">Usage</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <li><a href="#resources">Resources</a></li>
+      <li><a href="#license">License</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ol>
+</details>
 
 ---
 
-##  Estructura del repositorio
+## Structure
+
+<details>
+  <summary>tree</summary>
 
 ```
 basic/
@@ -55,6 +83,8 @@ basic/
     ├── termux/              # Termux en Android
     └── vim/                 # Editor Vim/Neovim
 ```
+
+</details>
 
 ---
 
