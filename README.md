@@ -17,48 +17,48 @@
 
 ---
 
-## 📌 Tabla de contenidos
+## Tabla de contenidos
 
-- [📂 Estructura del repositorio](#-estructura-del-repositorio)
-- [💻 Tecnologías](#-tecnologías)
-- [🗂️ Contenido por sección](#-contenido-por-sección)
-- [📚 Recursos de aprendizaje](#-recursos-de-aprendizaje)
-- [🚀 Cómo contribuir](#-cómo-contribuir)
+- [ Estructura del repositorio](#-estructura-del-repositorio)
+- [ Tecnologías](#-tecnologías)
+- [ Contenido por sección](#-contenido-por-sección)
+- [ Recursos de aprendizaje](#-recursos-de-aprendizaje)
+- [ Cómo contribuir](#-cómo-contribuir)
 
 ---
 
-## 📂 Estructura del repositorio
+##  Estructura del repositorio
 
 ```
 basic/
-├── 📐 Arquitecture/          # Patrones y principios de arquitectura
-├── 💻 Development/           # Lenguajes y frameworks
-│   ├── API/                  # Diseño y consumo de APIs
-│   ├── JAVA/                 # Fundamentos de Java
-│   ├── JAVASCRIPT/           # JavaScript moderno (ES6+)
+├── arquitecture/          # Patrones y principios de arquitectura
+├── development/           # Lenguajes y frameworks
+│   ├── api/                  # Diseño y consumo de APIs
+│   ├── java/                 # Fundamentos de Java
+│   ├── javascript/           # JavaScript moderno (ES6+)
 │   │   ├── 0 Introduccion/   # Conceptos base
 │   │   ├── 1 Fundamentals/    # Variables, primitivos, funciones
 │   │   ├── 3 Control Structure/  # Operadores y condicionales
 │   │   └── Ejercicios/       # Ejercicios prácticos
-│   └── ROCKETBOT/            # Automatización con Rocketbot
-├── 📖 Learning/              # Tecnologías emergentes y especializadas
-│   ├── BLOCKCHAIN/           # Fundamentos de blockchain
-│   ├── LATEX/                # Composición tipográfica
-│   └── RESOURCES/            # Recursos de aprendizaje
-├── 🔧 Tools/                 # Herramientas de desarrollo
-│   ├── DOCKER/               # Contenedores y Docker Compose
-│   ├── GIT/                  # Control de versiones
-│   └── GITHUB/               # Workflows y GitHub Actions
-└── 🐧 Linux/                # Administración Linux
-    ├── COMMAND/              # Comandos esenciales
-    ├── SECURITY/            # Seguridad en sistemas
-    ├── TERMUX/              # Termux en Android
-    └── VIM/                 # Editor Vim/Neovim
+│   └── rocketbot/            # Automatización con Rocketbot
+├── learning/              # Tecnologías emergentes y especializadas
+│   ├── blockchain/           # Fundamentos de blockchain
+│   ├── latex/                # Composición tipográfica
+│   └── resources/            # Recursos de aprendizaje
+├── tools/                 # Herramientas de desarrollo
+│   ├── docker/               # Contenedores y Docker Compose
+│   ├── git/                  # Control de versiones
+│   └── github/               # Workflows y GitHub Actions
+└── linux/                # Administración Linux
+    ├── command/              # Comandos esenciales
+    ├── security/            # Seguridad en sistemas
+    ├── termux/              # Termux en Android
+    └── vim/                 # Editor Vim/Neovim
 ```
 
 ---
 
-## 💻 Tecnologías
+## Tecnologías
 
 ### Lenguajes de programación
 <div align="left">
@@ -99,31 +99,31 @@ basic/
 
 ---
 
-## 🗂️ Contenido por sección
+## Contenido por sección
 
-### 📐 Arquitecture
+### Arquitecture
 Patrones de diseño, principios SOLID, arquitectura hexagonal y mejores prácticas para estructurar código escalable.
 
-### 💻 Development
+### Development
 
-| Tema | Descripción |
-|------|-------------|
-| **API** | REST, GraphQL, consumo de servicios RESTful |
-| **JAVA** | Fundamentos, POO, Spring Boot |
+| Tema           | Descripción                                 |
+| -------------- | ------------------------------------------- |
+| **API**        | REST, GraphQL, consumo de servicios RESTful |
+| **JAVA**       | Fundamentos, POO, Spring Boot               |
 | **JAVASCRIPT** | Desde cero hasta conceptos avanzados (ES6+) |
-| **ROCKETBOT** | Automatización de tareas y procesos |
+| **ROCKETBOT**  | Automatización de tareas y procesos         |
 
-### 📖 Learning
+### Learning
 - **Blockchain**: Contratos inteligentes, Ethereum, wallets
 - **LaTeX**: Documentación técnica profesional
 - **Recursos**: Links útiles para seguir aprendiendo
 
-### 🔧 Tools
+### Tools
 - **Docker**: Containers, Compose, networking
 - **Git**: Versionado, branching, merge strategies
 - **GitHub**: Actions, Codespaces, colaboración
 
-### 🐧 Linux
+### Linux
 - **Comandos**: Los esenciales del día a día
 - **Seguridad**: Hardening, permisos, SSH
 - **Termux**: Linux en tu Android
@@ -131,7 +131,7 @@ Patrones de diseño, principios SOLID, arquitectura hexagonal y mejores práctic
 
 ---
 
-## 📚 Recursos de aprendizaje
+## Recursos de aprendizaje
 
 Estos son algunos de los recursos que uso para aprender:
 
@@ -141,7 +141,7 @@ Estos son algunos de los recursos que uso para aprender:
 
 ---
 
-## 🚀 Cómo contribuir
+## Cómo contribuir
 
 Este es un repositorio personal de aprendizaje, pero si encuentras errores o quieres sugerir mejoras, siéntete libre de:
 
