@@ -168,20 +168,7 @@ Estos son algunos de los recursos que uso para aprender:
 - [Project Based Learning](https://github.com/practical-tutorials/project-based-learning) — Aprende construyendo proyectos reales
 - [Coddy.tech](https://coddy.tech/) — Plataforma de cursos interactivos
 - [Guía de Entrevistas de Programación](https://github.com/DevCaress/guia-entrevistas-de-programacion) — Preparación para entrevistas técnicas
-
----
-
-## Cómo contribuir
-
-Este es un repositorio personal de aprendizaje, pero si encuentras errores o quieres sugerir mejoras, siéntete libre de:
-
-1. Fork del repositorio
-2. Crear una rama (`git checkout -b mejora/contenido`)
-3. Commit tus cambios (`git commit -m 'Actualizo sección X'`)
-4. Push a la rama (`git push origin mejora/contenido`)
-5. Abrir un Pull Request
-
----
+- [Programacion en java](https://www.politecnicodecolombia.edu.co/diplomados-virtuales-gratis/escuela-de-informacion/programacion-en-java.html) - Diplomados virtuales gratis
 
 <div align="center">
 
