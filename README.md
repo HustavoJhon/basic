@@ -26,6 +26,8 @@
 [![following](https://img.shields.io/github/followers/hustavojhon?style=for-the-badge&logo=github&label=Following&color=FF6B6B)](#)
 [![license](https://img.shields.io/github/license/hustavojhon/basic?style=for-the-badge&logo=scale&color=6BCB77)](#)
 </div>
+</div>
+
 
 ---
 
