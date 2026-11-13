@@ -2,10 +2,11 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
-> Estado: **F1 completada**. Incluye CLI, configuración XDG, logging, migraciones
-> SQLite y `basic doctor`. La TUI, el indexado y la búsqueda llegan en fases
-> posteriores. Markdown es la fuente de verdad; SQLite es índice y estado
-> complementario.
+> Estado: **F2–F10 implementadas**. Incluye TUI Gruvbox, indexado incremental,
+> explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
+> Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Markdown es la fuente de
+> verdad; SQLite es índice y estado complementario. Las notas existentes nunca
+> se reescriben automáticamente.
 
 ## Requisitos
 
@@ -26,6 +27,23 @@ El binario se llama `basic`.
 ## Comandos
 
 ```bash
+basic tui                     # abre la interfaz de terminal
+basic index                   # escanea el vault y actualiza el índice
+basic index --json
+
+basic search vim              # búsqueda difusa y de contenido
+basic search --scope content prestamo
+basic search --json --limit 10 ownership
+
+basic stats                   # resumen y actividad
+basic stats --json --days 30
+
+basic new linux/atajos-vim    # crea una nota nueva (nunca sobrescribe)
+basic new notas/idea --title "Idea" --no-index
+
+basic review                  # repasos pendientes
+basic review --json
+
 basic doctor                  # diagnóstico legible
 basic doctor --json           # informe estructurado
 basic doctor --strict         # los avisos también hacen fallar el comando
@@ -38,8 +56,48 @@ basic config show --json
 basic config path             # solo la ruta del archivo
 ```
 
-Sin subcomando se muestra la ayuda. `basic --version` y `basic --help` funcionan
-como en cualquier CLI de clap.
+En una terminal interactiva, ejecutar `basic` sin subcomando abre la TUI. En
+scripts o CI imprime la ayuda para no bloquear. `basic --version` y
+`basic --help` funcionan como en cualquier CLI de clap.
+
+`search` acepta `--scope all|title|content|path|category|code`. La búsqueda de
+contenido usa FTS5 (insensible a acentos); la de títulos, rutas y categorías usa
+coincidencia difusa y ordena por relevancia.
+
+## TUI
+
+| Tecla | Acción |
+|---|---|
+| `1`–`6` | inicio, explorar, aprender, repaso, pomodoro, estadísticas |
+| `Tab` | siguiente pantalla |
+| `j`/`k` | mover selección o desplazar el lector |
+| `Enter` | abrir el documento seleccionado |
+| `/` | buscar |
+| `n` | crear una nota nueva |
+| `i` | reindexar el vault |
+| `s` | cambiar estado de aprendizaje (en el lector) |
+| `f` | marcar o quitar favorito |
+| `e` | abrir la nota en `$EDITOR` |
+| `p` | ir a Pomodoro e iniciarlo |
+| `Espacio` | iniciar o pausar Pomodoro |
+| `x` / `>` | reiniciar / saltar fase |
+| `1`–`4` | calificar un repaso (otra vez, difícil, bien, fácil) |
+| `1`–`5` | elegir modo en Learning Mode |
+| `?` | ayuda contextual |
+| `q` / `Esc` | salir / volver |
+
+La TUI usa la paleta Gruvbox Dark, se adapta a partir de 70×20 y recurre a una
+vista de una columna en terminales estrechas. El lector renderiza encabezados,
+listas, tablas, código, citas, enlaces e imágenes como marcadores; las imágenes
+no se dibujan en la terminal.
+
+### Crear y editar
+
+`basic new` y `n` en la TUI crean un archivo con frontmatter opcional y se niegan
+a escribir si la ruta ya existe. La ruta debe ser relativa al vault y no puede
+salir de él (`..`, rutas absolutas). Para editar se abre el editor externo
+configurado (`editor`); al volver, la nota se recarga y se reindexa la siguiente
+vez que se solicite.
 
 ### Códigos de salida
 
@@ -122,9 +180,12 @@ Notas sobre la configuración:
   puede leer o validar, se generan los valores por defecto.
 - `scan.exclude` contiene **prefijos relativos al vault**, no globs. Excluir
   `tui` excluye todo su subárbol. `.git` y `.obsidian` se ignoran siempre.
-- `frontmatter` solo se aplicará a notas nuevas en fases posteriores; nunca se
-  reescriben notas existentes.
-- `theme`, `link_style`, Pomodoro y UI se usarán en F2 en adelante.
+- `frontmatter` solo se aplica a notas nuevas; las existentes nunca se
+  reescriben automáticamente. `link_style` queda reservado para generación de
+  enlaces y `theme` para temas alternativos (hoy Gruvbox Dark).
+- Los tiempos de Pomodoro y `auto_start_next` se aplican en la TUI. Si la
+  aplicación se cierra a mitad de una sesión, `pomodoro_runtime` permite saber
+  que quedó una sesión abierta.
 
 ## Logging
 
@@ -141,9 +202,18 @@ defecto `basic=info,warn`.
   encuentra `préstamo`.
 - La migración inicial crea el catálogo, etiquetas, enlaces, estado de
   aprendizaje, Pomodoro, eventos y actividad diaria.
-- Si se borra la base, el catálogo podrá reconstruirse escaneando el vault (F3).
-- Mientras F3 no cree la base, `doctor` marca esa comprobación como omitida en
-  lugar de aviso; así `--strict` no falla por algo que todavía no existe.
+- El índice es incremental por hash SHA-256 y tamaño/mtime; los archivos
+  borrados se marcan como ausentes en lugar de eliminarse del historial.
+- Si se borra la base, el catálogo se reconstruye escaneando el vault. `basic
+  index` y la primera ejecución de la TUI lo hacen automáticamente.
+- El indexador ignora `.git`, `.obsidian`, `.trash`, `tui`, `target` y
+  `node_modules` (prefijos configurables en `scan.exclude`).
+- `doctor` marca como omitida la comprobación de la base cuando aún no existe;
+  así `--strict` no falla por algo que se crea al primer uso.
+- El repaso usa un SM-2 simplificado y determinista: `otra vez` reinicia el
+  intervalo, `difícil` crece poco, `bien` y `fácil` alargan el intervalo.
+- La actividad diaria alimenta el heatmap y la racha. Solo las sesiones de
+  Pomodoro de concentración completadas suman tiempo de estudio.
 
 ## Obsidian
 
@@ -169,22 +239,44 @@ CI ejecuta exactamente esas comprobaciones en `.github/workflows/ci.yml`.
 La auditoría, la arquitectura y la hoja de ruta están en
 [`../docs/design/F0-audit.md`](../docs/design/F0-audit.md).
 
-## Alcance de F1
+## Fases implementadas
 
-Incluido:
+| Fase | Alcance |
+|---|---|
+| F0 | Auditoría y arquitectura |
+| F1 | Paquete Rust, XDG, logging, CLI, `doctor`, migraciones, CI |
+| F2 | TUI Ratatui con tema Gruvbox y dashboard |
+| F3 | Escáner e indexador incremental con FTS5 |
+| F4 | Explorador y búsqueda difusa/de contenido |
+| F5 | Visor Markdown con tablas, listas, código y citas |
+| F6 | Creación segura de notas y edición externa |
+| F7 | Learning Mode por modos |
+| F8 | Pomodoro con fases, ciclos y persistencia |
+| F9 | Estadísticas, actividad diaria y heatmap |
+| F10 | Repaso con SM-2 simplificado |
 
-- Paquete Rust `basic` con módulos separados.
-- Configuración XDG en TOML con validación.
-- Logging a archivo con rotación.
-- CLI (`doctor`, `paths`, `config`).
-- Migración inicial `0001_init.sql` y migrador.
-- Pruebas unitarias e integración.
-- CI para fmt, clippy, tests y build release.
+Pendiente para una fase posterior: resaltado de sintaxis por lenguaje,
+renderizado real de imágenes, edición embebida y temas alternativos.
 
-No incluido todavía:
+## Arquitectura
 
-- TUI y dashboard.
-- Indexado del vault.
-- Búsqueda y visor Markdown.
-- Creación/edición de notas.
-- Pomodoro, estadísticas y repaso.
+```text
+src/
+├── main.rs          # composition root y despacho CLI
+├── cli.rs           # comandos clap
+├── domain.rs        # modelos, SM-2, actividad y formato
+├── app.rs           # estado, acciones y Pomodoro (sin Ratatui)
+├── ui.rs            # pantallas Ratatui, eventos y tema Gruvbox
+├── ui/markdown.rs   # Markdown a líneas de Ratatui
+└── infra/
+    ├── markdown.rs  # metadatos, etiquetas, enlaces y excerpt
+    ├── index.rs     # escaneo, upsert, FTS, tags y enlaces
+    ├── catalog.rs   # consultas, búsqueda, estadísticas, repaso y Pomodoro
+    ├── notes.rs     # creación de notas con frontmatter
+    ├── sqlite.rs    # apertura, migraciones y conexión
+    └── fs.rs        # escritura atómica
+```
+
+Markdown es la fuente de verdad. `app` e `infra` no dependen de Ratatui; `ui`
+solo presenta y traduce eventos. Esto mantiene la lógica de repaso, Pomodoro e
+indexado comprobable sin terminal.

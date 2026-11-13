@@ -336,4 +336,98 @@ fn no_subcommand_prints_help() {
     assert!(text.contains("Usage:"));
     assert!(text.contains("doctor"));
     assert!(text.contains("config"));
+    assert!(text.contains("index"));
+    assert!(text.contains("search"));
+}
+
+#[test]
+fn index_search_stats_and_review_workflow() {
+    let temp = TempDir::new().unwrap();
+    let vault = temp.path().join("vault");
+    fs::create_dir_all(vault.join("linux/vim")).unwrap();
+    fs::write(vault.join("nota.md"), "# Nota\n\nContenido de prueba.\n").unwrap();
+    fs::write(
+        vault.join("linux/vim/atajos.md"),
+        "# Atajos de Vim\n\n`dd` borra una línea y `yy` la copia. #vim\n",
+    )
+    .unwrap();
+
+    let index = run({
+        let mut command = basic(temp.path());
+        command.args(["index", "--json"]);
+        command
+    });
+    assert!(index.status.success(), "stderr: {}", stderr(&index));
+    let report = json(&index);
+    assert_eq!(report["added"], 2, "{report:#}");
+    assert_eq!(report["errors"].as_array().unwrap().len(), 0);
+
+    let search = run({
+        let mut command = basic(temp.path());
+        command.args(["search", "--json", "--scope", "content", "copia"]);
+        command
+    });
+    assert!(search.status.success(), "stderr: {}", stderr(&search));
+    let results = json(&search);
+    assert_eq!(results.as_array().unwrap().len(), 1, "{results:#}");
+    assert_eq!(results[0]["title"], "Atajos de Vim");
+
+    let stats = run({
+        let mut command = basic(temp.path());
+        command.args(["stats", "--json", "--days", "7"]);
+        command
+    });
+    assert!(stats.status.success(), "stderr: {}", stderr(&stats));
+    let stats = json(&stats);
+    assert_eq!(stats["stats"]["total"], 2);
+    assert_eq!(stats["activity"].as_array().unwrap().len(), 7);
+
+    let review = run({
+        let mut command = basic(temp.path());
+        command.args(["review", "--json"]);
+        command
+    });
+    assert!(review.status.success(), "stderr: {}", stderr(&review));
+    assert_eq!(json(&review).as_array().unwrap().len(), 0);
+}
+
+#[test]
+fn new_creates_a_note_and_never_overwrites() {
+    let temp = TempDir::new().unwrap();
+    make_vault(temp.path());
+
+    let created = run({
+        let mut command = basic(temp.path());
+        command.args(["new", "linux/atajos-vim", "--title", "Atajos de Vim"]);
+        command
+    });
+    assert!(created.status.success(), "stderr: {}", stderr(&created));
+    let path = temp.path().join("vault/linux/atajos-vim.md");
+    let original = fs::read_to_string(&path).unwrap();
+    assert!(original.contains("# Atajos de Vim"));
+    assert!(original.starts_with("---\ntitle: \"Atajos de Vim\""));
+
+    let conflict = run({
+        let mut command = basic(temp.path());
+        command.args(["new", "linux/atajos-vim"]);
+        command
+    });
+    assert!(!conflict.status.success());
+    assert!(stderr(&conflict).contains("ya existe"));
+    assert_eq!(fs::read_to_string(&path).unwrap(), original);
+}
+
+#[test]
+fn new_rejects_paths_outside_the_vault() {
+    let temp = TempDir::new().unwrap();
+    make_vault(temp.path());
+
+    for path in ["../fuera", "/absoluta"] {
+        let output = run({
+            let mut command = basic(temp.path());
+            command.args(["new", path]);
+            command
+        });
+        assert!(!output.status.success(), "«{path}» no debería crearse");
+    }
 }
