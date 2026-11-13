@@ -4,13 +4,16 @@
 //! el comando `basic doctor`. Markdown sigue siendo la fuente de verdad; este
 //! paquete solo construye la infraestructura para indexarlo y estudiarlo.
 
+pub mod app;
 pub mod cli;
 pub mod config;
 pub mod doctor;
+pub mod domain;
 pub mod error;
 pub mod infra;
 pub mod logging;
 pub mod paths;
+pub mod ui;
 
 pub use error::BasicError;
 

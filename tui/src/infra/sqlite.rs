@@ -187,9 +187,14 @@ impl Database {
             .query_row("PRAGMA journal_mode", [], |row| row.get(0))?)
     }
 
-    /// Acceso de bajo nivel para los módulos de indexado de fases futuras.
+    /// Acceso de bajo nivel para los módulos de indexado.
     pub fn connection(&self) -> &Connection {
         &self.connection
+    }
+
+    /// Acceso mutable para transacciones e indexado.
+    pub fn connection_mut(&mut self) -> &mut Connection {
+        &mut self.connection
     }
 
     fn configure_write(&self, on_disk: bool) -> Result<(), BasicError> {
