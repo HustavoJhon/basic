@@ -1,2 +1,7 @@
 .fake
 .obsidian
+tui/target/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
