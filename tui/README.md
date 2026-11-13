@@ -32,7 +32,7 @@ basic doctor --strict         # los avisos también hacen fallar el comando
 basic paths                   # rutas XDG resueltas
 basic paths --json
 basic config init             # crea ~/.config/basic/config.toml
-basic config init --force     # sobrescribe
+basic config init --force     # reescribe y deja una copia .bak-*
 basic config show             # configuración efectiva en TOML
 basic config show --json
 basic config path             # solo la ruta del archivo
@@ -51,8 +51,11 @@ como en cualquier CLI de clap.
 
 `doctor` no modifica el vault ni abre la base real en escritura: valida el
 esquema en una conexión SQLite en memoria y, si la base existe, la abre en modo
-lectura. Solo escribe archivos efímeros de prueba en los directorios de datos y
-estado para comprobar permisos.
+lectura. Para comprobar permisos puede crear los directorios de datos y estado
+si no existen y escribe en ellos archivos efímeros de prueba.
+
+Con `--strict`, el informe indica explícitamente `Estado: fallo por avisos
+(--strict)` cuando el código de salida es 1 por ese motivo.
 
 ## Rutas XDG
 
@@ -113,6 +116,10 @@ Notas sobre la configuración:
 - `vault` y `database` deben ser rutas absolutas. `~` se expande al inicio del
   usuario.
 - Los campos desconocidos se rechazan para detectar erratas.
+- `basic config init --force` guarda una copia `config.toml.bak-<fecha>` antes de
+  escribir. Si la configuración anterior es válida conserva sus valores, así que
+  ejecutarlo desde otro directorio no cambia el vault configurado. Si no se
+  puede leer o validar, se generan los valores por defecto.
 - `scan.exclude` contiene **prefijos relativos al vault**, no globs. Excluir
   `tui` excluye todo su subárbol. `.git` y `.obsidian` se ignoran siempre.
 - `frontmatter` solo se aplicará a notas nuevas en fases posteriores; nunca se
@@ -135,6 +142,8 @@ defecto `basic=info,warn`.
 - La migración inicial crea el catálogo, etiquetas, enlaces, estado de
   aprendizaje, Pomodoro, eventos y actividad diaria.
 - Si se borra la base, el catálogo podrá reconstruirse escaneando el vault (F3).
+- Mientras F3 no cree la base, `doctor` marca esa comprobación como omitida en
+  lugar de aviso; así `--strict` no falla por algo que todavía no existe.
 
 ## Obsidian
 

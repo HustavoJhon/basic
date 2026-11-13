@@ -1,6 +1,10 @@
+use std::ffi::OsStr;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use anyhow::{Context, bail};
+use chrono::Utc;
 use clap::{CommandFactory, Parser};
 use serde::Serialize;
 
@@ -67,7 +71,7 @@ fn run_doctor(paths: &Paths, args: DoctorArgs) -> anyhow::Result<u8> {
     if args.json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
-        print!("{}", report.render());
+        print!("{}", report.render(args.strict));
     }
 
     Ok(report.exit_code(args.strict) as u8)
@@ -89,14 +93,43 @@ fn run_paths(paths: &Paths, args: PathsArgs) -> anyhow::Result<u8> {
 }
 
 fn run_config_init(paths: &Paths, args: ConfigInitArgs) -> anyhow::Result<u8> {
-    if paths.config_file.exists() && !args.force {
+    let exists = paths.config_file.exists();
+    if exists && !args.force {
         bail!(
             "{} ya existe; usa `basic config init --force` para sobrescribirlo",
             paths.config_file.display()
         );
     }
 
-    let config = Config::default_for(paths);
+    // Sobrescribir sin copia de seguridad puede perder ajustes del usuario.
+    if exists {
+        let backup = backup_config(&paths.config_file)?;
+        println!("Copia de seguridad: {}", backup.display());
+    }
+
+    // `--force` reescribe la plantilla. Si el archivo anterior es válido se
+    // conservan sus valores para no cambiar el vault ni el resto de ajustes
+    // por el simple hecho de ejecutar el comando desde otro directorio.
+    let (config, preserved) = if exists {
+        match Config::load(paths) {
+            Ok(loaded) if loaded.validate().is_empty() => (loaded.config, true),
+            Ok(_) => {
+                eprintln!(
+                    "aviso: la configuración existente no es válida; se usarán valores por defecto"
+                );
+                (Config::default_for(paths), false)
+            }
+            Err(error) => {
+                eprintln!(
+                    "aviso: no se pudo leer la configuración existente ({error}); se usarán valores por defecto"
+                );
+                (Config::default_for(paths), false)
+            }
+        }
+    } else {
+        (Config::default_for(paths), false)
+    };
+
     let issues = config.validate();
     if !issues.is_empty() {
         bail!(
@@ -109,11 +142,38 @@ fn run_config_init(paths: &Paths, args: ConfigInitArgs) -> anyhow::Result<u8> {
         .save(&paths.config_file)
         .with_context(|| format!("no se pudo crear {}", paths.config_file.display()))?;
     println!(
-        "Configuración creada en {}\nVault: {}",
+        "Configuración {} en {}\nVault: {}",
+        if preserved { "actualizada" } else { "creada" },
         paths.config_file.display(),
         config.vault.display()
     );
+    if preserved {
+        println!("Se conservaron los valores existentes.");
+    }
     Ok(0)
+}
+
+/// Copia el archivo de configuración a un nombre con marca de tiempo.
+fn backup_config(path: &Path) -> anyhow::Result<PathBuf> {
+    let name = path
+        .file_name()
+        .unwrap_or_else(|| OsStr::new("config.toml"))
+        .to_string_lossy();
+    let stamp = Utc::now().format("%Y%m%dT%H%M%SZ");
+    let mut backup = path.with_file_name(format!("{name}.bak-{stamp}"));
+    let mut suffix = 1;
+    while backup.exists() {
+        backup = path.with_file_name(format!("{name}.bak-{stamp}-{suffix}"));
+        suffix += 1;
+    }
+
+    fs::copy(path, &backup).with_context(|| {
+        format!(
+            "no se pudo crear la copia de seguridad {}",
+            backup.display()
+        )
+    })?;
+    Ok(backup)
 }
 
 fn run_config_show(paths: &Paths, args: ConfigShowArgs) -> anyhow::Result<u8> {

@@ -94,7 +94,7 @@ fn doctor_json_describes_the_vault_without_creating_the_database() {
     );
     assert_eq!(check(&report, "database.location")["status"], "ok");
     assert_eq!(check(&report, "database.migrations")["status"], "ok");
-    assert_eq!(check(&report, "database.existing")["status"], "warn");
+    assert_eq!(check(&report, "database.existing")["status"], "skip");
 
     // El diagnóstico no debe crear la base real, solo validar el esquema en memoria.
     assert!(!temp.path().join(".local/share/basic/basic.db").exists());
@@ -149,12 +149,74 @@ fn config_init_show_and_force() {
     assert!(!second.status.success());
     assert!(stderr(&second).contains("ya existe"));
 
+    // Un valor personalizado debe sobrevivir a `--force`.
+    let custom = contents.replace("focus_minutes = 25", "focus_minutes = 45");
+    fs::write(&config_file, custom).unwrap();
+
     let forced = run({
         let mut command = basic(temp.path());
         command.args(["config", "init", "--force"]);
         command
     });
     assert!(forced.status.success(), "stderr: {}", stderr(&forced));
+    let forced_output = stdout(&forced);
+    assert!(forced_output.contains("Copia de seguridad"));
+    assert!(forced_output.contains("actualizada"));
+    assert!(forced_output.contains("Se conservaron los valores existentes."));
+
+    let backups: Vec<_> = fs::read_dir(config_file.parent().unwrap())
+        .unwrap()
+        .map(|entry| entry.unwrap())
+        .filter(|entry| entry.file_name().to_string_lossy().contains(".bak-"))
+        .collect();
+    assert_eq!(backups.len(), 1, "debe quedar una copia de seguridad");
+    assert!(
+        fs::read_to_string(backups[0].path())
+            .unwrap()
+            .contains("focus_minutes = 45")
+    );
+
+    let after = run({
+        let mut command = basic(temp.path());
+        command.args(["config", "show", "--json"]);
+        command
+    });
+    assert!(after.status.success(), "stderr: {}", stderr(&after));
+    assert_eq!(json(&after)["config"]["pomodoro"]["focus_minutes"], 45);
+}
+
+#[test]
+fn strict_passes_once_the_config_exists() {
+    let temp = TempDir::new().unwrap();
+    make_vault(temp.path());
+
+    let init = run({
+        let mut command = basic(temp.path());
+        command.args(["config", "init"]);
+        command
+    });
+    assert!(init.status.success(), "stderr: {}", stderr(&init));
+
+    // `sh` está disponible tanto en Linux como en macOS; `nvim` puede no
+    // estar instalado en el entorno de CI.
+    let config_file = temp.path().join(".config/basic/config.toml");
+    let contents = fs::read_to_string(&config_file)
+        .unwrap()
+        .replace("editor = \"nvim\"", "editor = \"sh\"");
+    fs::write(&config_file, contents).unwrap();
+
+    let strict = run({
+        let mut command = basic(temp.path());
+        command.args(["doctor", "--strict"]);
+        command
+    });
+    assert!(
+        strict.status.success(),
+        "stdout: {}\nstderr: {}",
+        stdout(&strict),
+        stderr(&strict)
+    );
+    assert!(stdout(&strict).contains("Estado: correcto."));
 }
 
 #[test]

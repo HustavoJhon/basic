@@ -98,7 +98,7 @@ impl Report {
     }
 
     /// Representación legible para la terminal.
-    pub fn render(&self) -> String {
+    pub fn render(&self, strict: bool) -> String {
         let mut output = String::new();
         output.push_str(&format!("BASIC {} — diagnóstico\n", self.version));
         if let Some(vault) = &self.vault {
@@ -126,7 +126,11 @@ impl Report {
         if self.summary.fail > 0 {
             output.push_str("Estado: requiere atención.\n");
         } else if self.summary.warn > 0 {
-            output.push_str("Estado: correcto con avisos.\n");
+            if strict {
+                output.push_str("Estado: fallo por avisos (--strict).\n");
+            } else {
+                output.push_str("Estado: correcto con avisos.\n");
+            }
         } else {
             output.push_str("Estado: correcto.\n");
         }
@@ -289,13 +293,15 @@ fn check_config_values(checks: &mut Vec<Check>, loaded: &Result<LoadedConfig, Ba
 }
 
 fn check_config_dir(checks: &mut Vec<Check>, paths: &Paths) {
-    if paths.config_file.exists() {
+    // La existencia del archivo ya la cubre `config.source`; aquí solo se
+    // comprueba el directorio para no duplicar el mismo aviso.
+    if paths.config_dir.is_dir() {
         push(
             checks,
             "paths.config",
             "config dir",
             Status::Ok,
-            paths.config_file.display().to_string(),
+            paths.config_dir.display().to_string(),
             None,
         );
     } else {
@@ -303,9 +309,9 @@ fn check_config_dir(checks: &mut Vec<Check>, paths: &Paths) {
             checks,
             "paths.config",
             "config dir",
-            Status::Warn,
-            format!("no existe {}", paths.config_file.display()),
-            Some("Ejecuta `basic config init` para crearlo.".to_string()),
+            Status::Skip,
+            format!("no existe {}", paths.config_dir.display()),
+            None,
         );
     }
 }
@@ -738,13 +744,15 @@ fn validate_schema_in_memory() -> Result<String, String> {
 fn check_database_file(checks: &mut Vec<Check>, paths: &Paths) {
     let path = &paths.database;
     if !path.exists() {
+        // F1 todavía no crea la base; que falte no es un problema de entorno.
+        // Se omite para que `--strict` sea utilizable antes de F3.
         push(
             checks,
             "database.existing",
             "db existente",
-            Status::Warn,
+            Status::Skip,
             format!("{} aún no existe", path.display()),
-            Some("Se creará automáticamente al abrir la aplicación.".to_string()),
+            Some("Se creará automáticamente cuando exista la capa de datos (F3).".to_string()),
         );
         return;
     }
@@ -1112,7 +1120,7 @@ mod tests {
         assert_eq!(find(&report, "vault.exclusions").status, Status::Ok);
         assert_eq!(find(&report, "database.location").status, Status::Ok);
         assert_eq!(find(&report, "database.migrations").status, Status::Ok);
-        assert_eq!(find(&report, "database.existing").status, Status::Warn);
+        assert_eq!(find(&report, "database.existing").status, Status::Skip);
         assert_eq!(find(&report, "obsidian").status, Status::Skip);
     }
 
@@ -1193,10 +1201,16 @@ mod tests {
         let (paths, loaded, vault) = fixture(&temp);
         fs::write(vault.join("nota.md"), "# Nota\n").unwrap();
 
-        let rendered = run(&paths, &Ok(loaded)).render();
+        let report = run(&paths, &Ok(loaded));
+
+        let rendered = report.render(false);
         assert!(rendered.contains("BASIC"));
         assert!(rendered.contains("Resumen:"));
         assert!(rendered.contains("markdown"));
+        assert!(rendered.contains("correcto con avisos"));
+
+        let strict = report.render(true);
+        assert!(strict.contains("fallo por avisos (--strict)"));
     }
 
     #[test]
