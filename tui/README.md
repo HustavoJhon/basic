@@ -2,11 +2,12 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
-> Estado: **F2–F10 implementadas**. Incluye TUI Gruvbox, indexado incremental,
+> Estado: **F2–F14 implementadas**. Incluye TUI Gruvbox, indexado incremental,
 > explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
-> Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Markdown es la fuente de
-> verdad; SQLite es índice y estado complementario. Las notas existentes nunca
-> se reescriben automáticamente.
+> Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Code Lab añade el
+> esquema v2, el dominio del lenguaje y el editor TUI reutilizable. Markdown es
+> la fuente de verdad; SQLite es índice y estado complementario. Las notas
+> existentes nunca se reescriben automáticamente.
 
 ## Requisitos
 
