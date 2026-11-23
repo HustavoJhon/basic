@@ -274,6 +274,79 @@ pub struct NoteLink {
     pub document_id: Option<i64>,
 }
 
+/// Plantilla declarativa para las notas de un lenguaje.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoteTemplate {
+    pub language: &'static str,
+    pub code_fence: &'static str,
+    pub concepts_heading: &'static str,
+    pub practice_heading: &'static str,
+}
+
+pub const CSHARP_NOTE_TEMPLATE: NoteTemplate = NoteTemplate {
+    language: DEFAULT_LANGUAGE,
+    code_fence: "csharp",
+    concepts_heading: "Conceptos de C#",
+    practice_heading: "Practica en C#",
+};
+
+pub const GENERIC_NOTE_TEMPLATE: NoteTemplate = NoteTemplate {
+    language: "generic",
+    code_fence: "text",
+    concepts_heading: "Conceptos",
+    practice_heading: "Practica",
+};
+
+/// Devuelve la plantilla del lenguaje, con una genérica como reserva.
+pub fn note_template(language: &str) -> NoteTemplate {
+    if language == DEFAULT_LANGUAGE {
+        CSHARP_NOTE_TEMPLATE
+    } else {
+        GENERIC_NOTE_TEMPLATE
+    }
+}
+
+/// Marcador invisible en la nota que permite volver a su elemento de origen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoteBacklink {
+    pub language: String,
+    pub item_type: NoteItemType,
+    pub item_id: i64,
+}
+
+impl NoteBacklink {
+    pub fn marker(&self) -> String {
+        format!(
+            "<!-- basic-code-lab language=\"{}\" type=\"{}\" id=\"{}\" -->",
+            self.language,
+            self.item_type.as_str(),
+            self.item_id
+        )
+    }
+
+    /// Lee el primer marcador válido del cuerpo de una nota.
+    pub fn parse(body: &str) -> Option<Self> {
+        let line = body.lines().find(|line| line.contains("basic-code-lab"))?;
+        let language = note_attribute(line, "language")?;
+        let raw_type = note_attribute(line, "type")?;
+        let item_type = NoteItemType::parse(&raw_type)?;
+        let item_id = note_attribute(line, "id")?.parse().ok()?;
+        Some(Self {
+            language,
+            item_type,
+            item_id,
+        })
+    }
+}
+
+fn note_attribute(line: &str, key: &str) -> Option<String> {
+    let needle = format!("{key}=\"");
+    let start = line.find(&needle)? + needle.len();
+    let rest = &line[start..];
+    let end = rest.find('"')?;
+    Some(rest[..end].to_string())
+}
+
 /// Ejemplo visible en el enunciado.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Example {
@@ -803,6 +876,28 @@ mod tests {
         };
         assert_eq!(exercise.visible_cases().count(), 1);
         assert_eq!(exercise.hidden_case_count(), 1);
+    }
+
+    #[test]
+    fn note_backlinks_survive_a_round_trip() {
+        let backlink = NoteBacklink {
+            language: "csharp".to_string(),
+            item_type: NoteItemType::Exercise,
+            item_id: 42,
+        };
+        let body = format!("# Prueba\n\n{}\n\nContenido\n", backlink.marker());
+        assert_eq!(NoteBacklink::parse(&body), Some(backlink));
+        assert_eq!(NoteBacklink::parse("# Sin marcador\n"), None);
+        let malformed = "<!-- basic-code-lab language=\"csharp\" type=\"otro\" id=\"1\" -->";
+        assert_eq!(NoteBacklink::parse(malformed), None);
+    }
+
+    #[test]
+    fn note_templates_use_the_language_code_fence() {
+        let csharp = note_template(DEFAULT_LANGUAGE);
+        assert_eq!(csharp.code_fence, "csharp");
+        assert_eq!(csharp.concepts_heading, "Conceptos de C#");
+        assert_eq!(note_template("python").code_fence, "text");
     }
 
     #[test]
