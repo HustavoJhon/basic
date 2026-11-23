@@ -2,12 +2,12 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
-> Estado: **F2–F18 implementadas**. Incluye TUI Gruvbox, indexado incremental,
+> Estado: **F2–F19 implementadas**. Incluye TUI Gruvbox, indexado incremental,
 > explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
 > Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Code Lab añade el
 > esquema v4, el dominio del lenguaje, el editor TUI reutilizable, el runner
-> síncrono de C#, el catálogo de lecciones con cuestionarios y la práctica de
-> ejercicios con borradores, intentos persistentes y filtro por dificultad.
+> síncrono de C#, lecciones con cuestionario, ejercicios con borradores e
+> intentos, filtro por dificultad, repaso de conceptos y estadísticas propias.
 > Markdown es la fuente de verdad; SQLite es índice y estado complementario.
 > Las notas existentes nunca se reescriben automáticamente.
 
@@ -51,6 +51,8 @@ basic code-lab seed           # puebla lecciones y ejercicios
 basic code-lab seed --json
 basic code-lab lessons        # lista las lecciones de C#
 basic code-lab lessons --json
+basic code-lab stats           # progreso agregado de lecciones y ejercicios
+basic code-lab stats --json
 
 basic doctor                  # diagnóstico legible
 basic doctor --json           # informe estructurado
@@ -76,7 +78,7 @@ coincidencia difusa y ordena por relevancia.
 
 | Tecla | Acción |
 |---|---|
-| `1`–`7` | inicio, explorar, aprender, repaso, pomodoro, estadísticas, code lab |
+| `1`–`8` | inicio, explorar, aprender, repaso, pomodoro, estadísticas, code lab, conceptos |
 | `Tab` | siguiente pantalla |
 | `j`/`k` | mover selección o desplazar el lector |
 | `Enter` | abrir el documento seleccionado |
@@ -90,11 +92,14 @@ coincidencia difusa y ordena por relevancia.
 | `Espacio` | iniciar o pausar Pomodoro |
 | `x` / `>` | reiniciar / saltar fase |
 | `1`–`4` | calificar un repaso (otra vez, difícil, bien, fácil) |
-| `1`–`5` | elegir modo en Learning Mode |
+| `1`–`6` | elegir modo en Learning Mode (el sexto es Code Lab) |
 | `Enter` (Code Lab) | abrir el ejercicio seleccionado |
 | `Ctrl+S` | guardar el borrador del ejercicio |
 | `Ctrl+Enter` | ejecutar los casos de prueba del ejercicio |
 | `Ctrl+V` | mostrar u ocultar la solución de referencia |
+| `1`–`4` (lección) | responder una pregunta del cuestionario |
+| `Enter` (lección) | enviar el cuestionario |
+| `1`–`4` (conceptos) | calificar el concepto actual |
 | `?` | ayuda contextual |
 | `q` / `Esc` | salir / volver |
 
@@ -123,6 +128,23 @@ se dibuja. `Ctrl+V` revela la solución de referencia solo cuando lo pides.
 Abrir un ejercicio no cuenta como intento. Cada ejecución registra un intento,
 sus trazas por fase y el mejor resultado; el tiempo de Code Lab se acumula por
 separado del Pomodoro.
+
+### Learning Mode, repaso y estadísticas
+
+El modo `[6] code lab` de Learning Mode muestra las lecciones en curso o a
+repasar y los ejercicios intentados o a repasar. `Enter` abre la lección con su
+cuestionario o el ejercicio con el editor. Una lección solo se completa cuando
+todas las respuestas son correctas; abrirla no la completa.
+
+Los conceptos de lecciones y ejercicios se registran automáticamente en una
+cola de repaso. Pulsa `8` para ver el concepto actual, califícalo con `1`–`4` y
+el siguiente seprograma con la misma curva SM-2 que el repaso de notas. El tiempo
+de repaso no se añade al Pomodoro.
+
+La pantalla de estadísticas muestra, junto al heatmap, las lecciones
+completadas, los ejercicios resueltos, los intentos superados, los conceptos
+pendientes y el tiempo acumulado en Code Lab. `basic code-lab stats` ofrece el
+mismo resumen para scripts.
 
 ### Códigos de salida
 
