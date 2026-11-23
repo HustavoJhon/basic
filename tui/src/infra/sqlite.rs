@@ -7,7 +7,7 @@ use rusqlite::{Connection, OpenFlags};
 use crate::error::BasicError;
 
 /// Última versión de esquema que entiende este binario.
-pub const LATEST_SCHEMA_VERSION: u32 = 1;
+pub const LATEST_SCHEMA_VERSION: u32 = 2;
 
 /// Tablas que deben existir tras aplicar todas las migraciones.
 ///
@@ -28,6 +28,17 @@ pub const EXPECTED_TABLES: &[&str] = &[
     "daily_activity",
     "daily_category_activity",
     "meta",
+    "code_lab_languages",
+    "code_lab_paths",
+    "code_lab_lessons",
+    "code_lab_exercises",
+    "code_lab_lesson_progress",
+    "code_lab_exercise_progress",
+    "code_lab_attempts",
+    "code_lab_executions",
+    "code_lab_concept_review",
+    "code_lab_favorites",
+    "code_lab_session_links",
 ];
 
 /// Una migración inmutable, embebida en el binario.
@@ -36,14 +47,34 @@ pub struct Migration {
     pub version: u32,
     pub name: &'static str,
     pub sql: &'static str,
+    /// Reversión documentada cuando es viable. No se aplica automáticamente:
+    /// requiere una copia de seguridad y ajustar `user_version` a mano.
+    pub down_sql: Option<&'static str>,
 }
 
 /// Migraciones en orden estrictamente creciente.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "init",
-    sql: include_str!("../../migrations/0001_init.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "init",
+        sql: include_str!("../../migrations/0001_init.sql"),
+        down_sql: None,
+    },
+    Migration {
+        version: 2,
+        name: "code_lab",
+        sql: include_str!("../../migrations/0002_code_lab.sql"),
+        down_sql: Some(include_str!("../../migrations/0002_code_lab.down.sql")),
+    },
+];
+
+/// Devuelve la reversión documentada de una migración, si existe.
+pub fn down_sql(version: u32) -> Option<&'static str> {
+    MIGRATIONS
+        .iter()
+        .find(|migration| migration.version == version)?
+        .down_sql
+}
 
 /// Conexión SQLite configurada para BASIC.
 pub struct Database {
@@ -254,6 +285,43 @@ mod tests {
         let mut database = Database::open_in_memory().unwrap();
         database.migrate().unwrap();
         assert_eq!(database.schema_version().unwrap(), LATEST_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn code_lab_migration_preserves_v1_data() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("basic-v1.db");
+        {
+            let connection = Connection::open(&path).unwrap();
+            connection.execute_batch(MIGRATIONS[0].sql).unwrap();
+            connection
+                .pragma_update(None, "user_version", 1_u32)
+                .unwrap();
+            connection
+                .execute(
+                    "INSERT INTO meta (key, value) VALUES ('v1', 'conservado')",
+                    [],
+                )
+                .unwrap();
+        }
+
+        let database = Database::open(&path).unwrap();
+        assert_eq!(database.schema_version().unwrap(), 2);
+        for table in EXPECTED_TABLES {
+            assert!(database.has_table(table).unwrap(), "falta {table}");
+        }
+        let value: String = database
+            .connection()
+            .query_row("SELECT value FROM meta WHERE key = 'v1'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(value, "conservado");
+
+        let down = down_sql(2).expect("la migración 2 debe tener reversión documentada");
+        assert!(down.contains("DROP TABLE IF EXISTS code_lab_exercises"));
+        assert!(!down.contains("DROP TABLE IF EXISTS documents"));
+        assert!(down_sql(1).is_none());
     }
 
     #[test]
