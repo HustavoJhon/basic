@@ -462,6 +462,15 @@ fn code_lab_seed_and_lessons_workflow() {
     assert_eq!(summary["exercises"], 6);
     assert_eq!(summary["attempts"], 0);
     assert!(summary["concepts_due"].as_i64().unwrap() > 0);
+
+    let notes = run({
+        let mut command = basic(temp.path());
+        command.args(["code-lab", "notes", "--json"]);
+        command
+    });
+    assert!(notes.status.success(), "stderr: {}", stderr(&notes));
+    let links = json(&notes);
+    assert!(links.as_array().unwrap().is_empty());
 }
 
 #[test]

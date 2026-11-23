@@ -10,9 +10,9 @@ use clap::{CommandFactory, Parser};
 use serde::Serialize;
 
 use basic::cli::{
-    Cli, CodeLabCommand, CodeLabLessonsArgs, CodeLabSeedArgs, CodeLabStatsArgs, Command,
-    ConfigCommand, ConfigInitArgs, ConfigShowArgs, DoctorArgs, IndexArgs, NewNoteArgs, PathsArgs,
-    ReviewArgs, SearchArgs, StatsArgs,
+    Cli, CodeLabCommand, CodeLabLessonsArgs, CodeLabNotesArgs, CodeLabSeedArgs, CodeLabStatsArgs,
+    Command, ConfigCommand, ConfigInitArgs, ConfigShowArgs, DoctorArgs, IndexArgs, NewNoteArgs,
+    PathsArgs, ReviewArgs, SearchArgs, StatsArgs,
 };
 use basic::code_lab::app::CodeLabService;
 use basic::config::{Config, LoadedConfig};
@@ -67,6 +67,7 @@ fn run() -> anyhow::Result<u8> {
             CodeLabCommand::Seed(args) => run_code_lab_seed(&paths, args),
             CodeLabCommand::Lessons(args) => run_code_lab_lessons(&paths, args),
             CodeLabCommand::Stats(args) => run_code_lab_stats(&paths, args),
+            CodeLabCommand::Notes(args) => run_code_lab_notes(&paths, args),
         },
         None => {
             // En una terminal interactiva el comando principal es la TUI; en
@@ -340,6 +341,30 @@ fn run_code_lab_stats(paths: &Paths, args: CodeLabStatsArgs) -> anyhow::Result<u
             "Tiempo de Code Lab    {}",
             basic::domain::format_duration(stats.seconds_spent)
         );
+    }
+    Ok(0)
+}
+
+fn run_code_lab_notes(paths: &Paths, args: CodeLabNotesArgs) -> anyhow::Result<u8> {
+    let loaded = load_valid(paths)?;
+    let mut database = Database::open(&loaded.config.database)
+        .with_context(|| format!("no se pudo abrir {}", loaded.config.database.display()))?;
+    CodeLabService::new(&mut database).seed()?;
+    let links = CodeLabService::new(&mut database).note_links()?;
+
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&links)?);
+    } else {
+        for link in &links {
+            println!(
+                "{} {} {} → {}",
+                link.language,
+                link.item_type.label(),
+                link.item_id,
+                link.note_path
+            );
+        }
+        println!("\n{} nota(s) enlazada(s).", links.len());
     }
     Ok(0)
 }

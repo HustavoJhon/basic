@@ -54,6 +54,8 @@ pub enum CodeLabCommand {
     Lessons(CodeLabLessonsArgs),
     /// Muestra el progreso agregado de lecciones y ejercicios
     Stats(CodeLabStatsArgs),
+    /// Lista las notas Markdown enlazadas con lecciones, ejercicios y conceptos
+    Notes(CodeLabNotesArgs),
 }
 
 #[derive(Debug, Args)]
@@ -73,6 +75,13 @@ pub struct CodeLabLessonsArgs {
 #[derive(Debug, Args)]
 pub struct CodeLabStatsArgs {
     /// Emite el resumen como JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct CodeLabNotesArgs {
+    /// Emite los enlaces como JSON
     #[arg(long)]
     pub json: bool,
 }
