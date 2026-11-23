@@ -36,6 +36,36 @@ pub enum Command {
     New(NewNoteArgs),
     /// Lista los documentos pendientes de repaso
     Review(ReviewArgs),
+    /// Gestiona Code Lab: catálogo, lecciones y práctica
+    CodeLab(CodeLabArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct CodeLabArgs {
+    #[command(subcommand)]
+    pub command: CodeLabCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CodeLabCommand {
+    /// Puebla o actualiza el catálogo de lecciones y ejercicios
+    Seed(CodeLabSeedArgs),
+    /// Lista las lecciones disponibles
+    Lessons(CodeLabLessonsArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct CodeLabSeedArgs {
+    /// Emite el informe como JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct CodeLabLessonsArgs {
+    /// Emite las lecciones como JSON
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Debug, Args)]

@@ -418,6 +418,41 @@ fn new_creates_a_note_and_never_overwrites() {
 }
 
 #[test]
+fn code_lab_seed_and_lessons_workflow() {
+    let temp = TempDir::new().unwrap();
+    make_vault(temp.path());
+    let init = run({
+        let mut command = basic(temp.path());
+        command.args(["config", "init"]);
+        command
+    });
+    assert!(init.status.success(), "stderr: {}", stderr(&init));
+
+    let seed = run({
+        let mut command = basic(temp.path());
+        command.args(["code-lab", "seed", "--json"]);
+        command
+    });
+    assert!(seed.status.success(), "stderr: {}", stderr(&seed));
+    let report = json(&seed);
+    assert_eq!(report["languages"], 1);
+    assert_eq!(report["lessons"], 5);
+    assert_eq!(report["questions"], 10);
+    assert_eq!(report["exercises"], 6);
+
+    let lessons = run({
+        let mut command = basic(temp.path());
+        command.args(["code-lab", "lessons", "--json"]);
+        command
+    });
+    assert!(lessons.status.success(), "stderr: {}", stderr(&lessons));
+    let list = json(&lessons);
+    assert_eq!(list.as_array().unwrap().len(), 5);
+    assert_eq!(list[0]["slug"], "primer-programa");
+    assert_eq!(list[4]["slug"], "entradas-y-pruebas");
+}
+
+#[test]
 fn new_rejects_paths_outside_the_vault() {
     let temp = TempDir::new().unwrap();
     make_vault(temp.path());

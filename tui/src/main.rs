@@ -10,9 +10,11 @@ use clap::{CommandFactory, Parser};
 use serde::Serialize;
 
 use basic::cli::{
-    Cli, Command, ConfigCommand, ConfigInitArgs, ConfigShowArgs, DoctorArgs, IndexArgs,
-    NewNoteArgs, PathsArgs, ReviewArgs, SearchArgs, StatsArgs,
+    Cli, CodeLabCommand, CodeLabLessonsArgs, CodeLabSeedArgs, Command, ConfigCommand,
+    ConfigInitArgs, ConfigShowArgs, DoctorArgs, IndexArgs, NewNoteArgs, PathsArgs, ReviewArgs,
+    SearchArgs, StatsArgs,
 };
+use basic::code_lab::app::CodeLabService;
 use basic::config::{Config, LoadedConfig};
 use basic::domain::{ActivityDay, DashboardStats, SearchScope};
 use basic::infra::catalog;
@@ -61,6 +63,10 @@ fn run() -> anyhow::Result<u8> {
         Some(Command::Stats(args)) => run_stats(&paths, args),
         Some(Command::New(args)) => run_new(&paths, args),
         Some(Command::Review(args)) => run_review(&paths, args),
+        Some(Command::CodeLab(args)) => match args.command {
+            CodeLabCommand::Seed(args) => run_code_lab_seed(&paths, args),
+            CodeLabCommand::Lessons(args) => run_code_lab_lessons(&paths, args),
+        },
         None => {
             // En una terminal interactiva el comando principal es la TUI; en
             // scripts y CI se imprime la ayuda para no bloquear.
@@ -244,6 +250,69 @@ fn run_review(paths: &Paths, args: ReviewArgs) -> anyhow::Result<u8> {
             println!("{}  ·  {}  ·  vence {}", document.title, document.path, due);
         }
         println!("\n{} repaso(s) pendiente(s).", documents.len());
+    }
+    Ok(0)
+}
+
+fn run_code_lab_seed(paths: &Paths, args: CodeLabSeedArgs) -> anyhow::Result<u8> {
+    let loaded = load_valid(paths)?;
+    let mut database = Database::open(&loaded.config.database)
+        .with_context(|| format!("no se pudo abrir {}", loaded.config.database.display()))?;
+    let report = CodeLabService::new(&mut database).seed()?;
+
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        println!("Idiomas          {}", report.languages);
+        println!("Rutas            {}", report.paths);
+        println!("Lecciones        {}", report.lessons);
+        println!("Preguntas        {}", report.questions);
+        println!("Ejercicios       {}", report.exercises);
+    }
+    Ok(0)
+}
+
+fn run_code_lab_lessons(paths: &Paths, args: CodeLabLessonsArgs) -> anyhow::Result<u8> {
+    let loaded = load_valid(paths)?;
+    let mut database = Database::open(&loaded.config.database)
+        .with_context(|| format!("no se pudo abrir {}", loaded.config.database.display()))?;
+    let mut service = CodeLabService::new(&mut database);
+    service.seed()?;
+    let lessons = service.lessons()?;
+
+    if args.json {
+        #[derive(Serialize)]
+        struct Output<'a> {
+            id: i64,
+            slug: &'a str,
+            title: &'a str,
+            summary: &'a str,
+            concepts: &'a [String],
+            order: i32,
+            minutes: i32,
+        }
+        let output: Vec<Output<'_>> = lessons
+            .iter()
+            .map(|lesson| Output {
+                id: lesson.id,
+                slug: &lesson.slug,
+                title: &lesson.title,
+                summary: &lesson.summary,
+                concepts: &lesson.concepts,
+                order: lesson.order_index,
+                minutes: lesson.estimated_minutes,
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        for lesson in &lessons {
+            println!(
+                "{:02}. {} · {} min · {}",
+                lesson.order_index, lesson.title, lesson.estimated_minutes, lesson.slug
+            );
+            println!("     {}", lesson.summary);
+        }
+        println!("\n{} lección(es) disponibles.", lessons.len());
     }
     Ok(0)
 }
