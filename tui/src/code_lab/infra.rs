@@ -8,8 +8,9 @@ use serde::Serialize;
 
 use crate::code_lab::catalog::{TestCaseSeed, all_catalogs};
 use crate::code_lab::domain::{
-    AnswerResult, Example, Exercise, Lesson, LessonProgress, LessonStatus, QuizQuestion,
-    QuizResult, TestCase, TestSpec, lesson_status_after_open, lesson_status_after_quiz,
+    AnswerResult, AttemptStatus, AttemptSummary, Example, Exercise, ExerciseProgress,
+    ExerciseStatus, Lesson, LessonProgress, LessonStatus, QuizQuestion, QuizResult, TestCase,
+    TestSpec, lesson_status_after_open, lesson_status_after_quiz,
 };
 use crate::error::BasicError;
 use crate::infra::catalog::unix_now;
@@ -393,45 +394,190 @@ pub fn submit_quiz(
     })
 }
 
-/// Lista los ejercicios de un lenguaje para futuras pantallas y seed.
+const EXERCISE_COLUMNS: &str = "id, language, path_id, lesson_id, slug, title, difficulty, \
+     topic, level, concepts_json, description_md, examples_json, \
+     constraints_json, hints_json, starter_code, test_spec_json";
+
+/// Lista los ejercicios de un lenguaje en orden de dificultad.
 pub fn list_exercises(database: &Database, language: &str) -> Result<Vec<Exercise>, BasicError> {
-    let mut statement = database.connection().prepare(
-        "SELECT id, language, path_id, lesson_id, slug, title, difficulty,
-                topic, level, concepts_json, description_md, examples_json,
-                constraints_json, hints_json, starter_code, test_spec_json
-         FROM code_lab_exercises WHERE language = ?1
-         ORDER BY level, difficulty, id",
-    )?;
-    let rows = statement.query_map([language], |row| {
-        let difficulty = crate::code_lab::domain::Difficulty::parse(&row.get::<_, String>(6)?)
-            .ok_or_else(|| {
-                rusqlite::Error::InvalidColumnType(
-                    6,
-                    "difficulty".to_string(),
-                    rusqlite::types::Type::Text,
-                )
-            })?;
-        Ok(Exercise {
-            id: row.get(0)?,
-            language: row.get(1)?,
-            path_id: row.get(2)?,
-            lesson_id: row.get(3)?,
-            slug: row.get(4)?,
-            title: row.get(5)?,
-            difficulty,
-            topic: row.get(7)?,
-            level: row.get(8)?,
-            concepts: from_json(&row.get::<_, String>(9)?),
-            description_md: row.get(10)?,
-            examples: from_json(&row.get::<_, String>(11)?),
-            constraints: from_json(&row.get::<_, String>(12)?),
-            hints: from_json(&row.get::<_, String>(13)?),
-            starter_code: row.get(14)?,
-            test_spec: from_json(&row.get::<_, String>(15)?),
-        })
-    })?;
+    let sql = format!(
+        "SELECT {EXERCISE_COLUMNS} FROM code_lab_exercises \
+         WHERE language = ?1 ORDER BY level, difficulty, id"
+    );
+    let mut statement = database.connection().prepare(&sql)?;
+    let rows = statement.query_map([language], row_to_exercise)?;
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(BasicError::from)
+}
+
+/// Devuelve un ejercicio concreto, incluido su código inicial y sus pruebas.
+pub fn exercise_detail(
+    database: &Database,
+    exercise_id: i64,
+) -> Result<Option<Exercise>, BasicError> {
+    let sql = format!("SELECT {EXERCISE_COLUMNS} FROM code_lab_exercises WHERE id = ?1");
+    database
+        .connection()
+        .query_row(&sql, [exercise_id], row_to_exercise)
+        .optional()
+        .map_err(BasicError::from)
+}
+
+/// La solución de referencia solo se entrega cuando se pide explícitamente.
+pub fn reveal_solution(
+    database: &Database,
+    exercise_id: i64,
+) -> Result<Option<String>, BasicError> {
+    database
+        .connection()
+        .query_row(
+            "SELECT reference_solution FROM code_lab_exercises WHERE id = ?1",
+            [exercise_id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(BasicError::from)
+}
+
+/// Progreso actual de un ejercicio; si no existe, devuelve un estado inicial.
+pub fn exercise_progress(
+    database: &Database,
+    exercise_id: i64,
+) -> Result<ExerciseProgress, BasicError> {
+    Ok(
+        read_exercise_progress(database.connection(), exercise_id)?.unwrap_or_else(|| {
+            ExerciseProgress {
+                exercise_id,
+                ..ExerciseProgress::default()
+            }
+        }),
+    )
+}
+
+/// Registra la apertura de un ejercicio. Nunca cuenta como intento ni lo
+/// marca como resuelto.
+pub fn open_exercise(
+    database: &mut Database,
+    exercise_id: i64,
+) -> Result<ExerciseProgress, BasicError> {
+    let now = unix_now();
+    database.connection().execute(
+        "INSERT INTO code_lab_exercise_progress
+         (exercise_id, status, last_opened_at, updated_at)
+         VALUES (?1, 'not_started', ?2, ?2)
+         ON CONFLICT(exercise_id) DO UPDATE SET
+             last_opened_at = excluded.last_opened_at,
+             updated_at = excluded.updated_at",
+        rusqlite::params![exercise_id, now],
+    )?;
+    exercise_progress(database, exercise_id)
+}
+
+/// Carga el borrador guardado para un ejercicio, si existe.
+pub fn load_draft(database: &Database, exercise_id: i64) -> Result<Option<String>, BasicError> {
+    database
+        .connection()
+        .query_row(
+            "SELECT code FROM code_lab_drafts WHERE exercise_id = ?1",
+            [exercise_id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(BasicError::from)
+}
+
+/// Guarda el código actual del editor como borrador.
+pub fn save_draft(database: &mut Database, exercise_id: i64, code: &str) -> Result<(), BasicError> {
+    let language: String = database.connection().query_row(
+        "SELECT language FROM code_lab_exercises WHERE id = ?1",
+        [exercise_id],
+        |row| row.get(0),
+    )?;
+    let now = unix_now();
+    database.connection().execute(
+        "INSERT INTO code_lab_drafts (language, exercise_id, code, updated_at)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(exercise_id) DO UPDATE SET
+             code = excluded.code,
+             updated_at = excluded.updated_at",
+        rusqlite::params![language, exercise_id, code, now],
+    )?;
+    Ok(())
+}
+
+/// Persiste un intento, sus trazas y el progreso derivado en una transacción.
+pub fn record_attempt(
+    database: &mut Database,
+    exercise_id: i64,
+    code: &str,
+    summary: &AttemptSummary,
+) -> Result<i64, BasicError> {
+    let now = unix_now();
+    let transaction = database.connection_mut().transaction()?;
+    transaction.execute(
+        "INSERT INTO code_lab_attempts
+         (exercise_id, started_at, finished_at, duration_seconds, status,
+          tests_passed, tests_total, compile_ok, language, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?2)",
+        rusqlite::params![
+            exercise_id,
+            now - summary.duration_seconds(),
+            now,
+            summary.duration_seconds(),
+            summary.status.as_str(),
+            summary.tests_passed,
+            summary.tests_total,
+            summary.compile_ok.map(i32::from),
+            crate::code_lab::domain::DEFAULT_LANGUAGE
+        ],
+    )?;
+    let attempt_id = transaction.last_insert_rowid();
+    transaction.execute(
+        "INSERT INTO code_lab_attempt_code (attempt_id, code) VALUES (?1, ?2)",
+        rusqlite::params![attempt_id, code],
+    )?;
+
+    for execution in &summary.executions {
+        transaction.execute(
+            "INSERT INTO code_lab_executions
+             (attempt_id, phase, command, exit_code, stdout, stderr, duration_ms, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            rusqlite::params![
+                attempt_id,
+                execution.phase.as_str(),
+                execution.command,
+                execution.exit_code,
+                execution.stdout,
+                execution.stderr,
+                i64::try_from(execution.duration_ms).unwrap_or(i64::MAX),
+                now
+            ],
+        )?;
+    }
+
+    let mut progress =
+        read_exercise_progress(&transaction, exercise_id)?.unwrap_or_else(|| ExerciseProgress {
+            exercise_id,
+            ..ExerciseProgress::default()
+        });
+    progress.attempts += 1;
+    progress.tests_total = summary.tests_total;
+    progress.best_tests_passed = progress.best_tests_passed.max(summary.tests_passed);
+    progress.best_score = progress.best_score.max(summary.score());
+    progress.last_attempt_id = Some(attempt_id);
+    progress.last_opened_at = Some(progress.last_opened_at.unwrap_or(now));
+    progress.updated_at = now;
+    if summary.status == AttemptStatus::Passed {
+        progress.status = ExerciseStatus::Solved;
+        if progress.solved_at.is_none() {
+            progress.solved_at = Some(now);
+        }
+    } else if progress.status != ExerciseStatus::Solved {
+        progress.status = ExerciseStatus::Attempted;
+    }
+    upsert_exercise_progress(&transaction, &progress)?;
+    transaction.commit()?;
+    Ok(attempt_id)
 }
 
 fn row_to_lesson(row: &Row<'_>) -> Result<Lesson, rusqlite::Error> {
@@ -458,6 +604,103 @@ fn row_to_question(row: &Row<'_>) -> Result<QuizQuestion, rusqlite::Error> {
         explanation: row.get(5)?,
         order_index: row.get(6)?,
     })
+}
+
+fn row_to_exercise(row: &Row<'_>) -> Result<Exercise, rusqlite::Error> {
+    let difficulty = crate::code_lab::domain::Difficulty::parse(&row.get::<_, String>(6)?)
+        .ok_or_else(|| {
+            rusqlite::Error::InvalidColumnType(
+                6,
+                "difficulty".to_string(),
+                rusqlite::types::Type::Text,
+            )
+        })?;
+    Ok(Exercise {
+        id: row.get(0)?,
+        language: row.get(1)?,
+        path_id: row.get(2)?,
+        lesson_id: row.get(3)?,
+        slug: row.get(4)?,
+        title: row.get(5)?,
+        difficulty,
+        topic: row.get(7)?,
+        level: row.get(8)?,
+        concepts: from_json(&row.get::<_, String>(9)?),
+        description_md: row.get(10)?,
+        examples: from_json(&row.get::<_, String>(11)?),
+        constraints: from_json(&row.get::<_, String>(12)?),
+        hints: from_json(&row.get::<_, String>(13)?),
+        starter_code: row.get(14)?,
+        test_spec: from_json(&row.get::<_, String>(15)?),
+    })
+}
+
+fn read_exercise_progress(
+    connection: &Connection,
+    exercise_id: i64,
+) -> Result<Option<ExerciseProgress>, BasicError> {
+    connection
+        .query_row(
+            "SELECT exercise_id, status, attempts, solved_at, last_opened_at,
+                    best_tests_passed, tests_total, best_score, seconds_spent,
+                    last_attempt_id, updated_at
+             FROM code_lab_exercise_progress WHERE exercise_id = ?1",
+            [exercise_id],
+            |row| {
+                Ok(ExerciseProgress {
+                    exercise_id: row.get(0)?,
+                    status: ExerciseStatus::parse(&row.get::<_, String>(1)?),
+                    attempts: row.get(2)?,
+                    solved_at: row.get(3)?,
+                    last_opened_at: row.get(4)?,
+                    best_tests_passed: row.get(5)?,
+                    tests_total: row.get(6)?,
+                    best_score: row.get(7)?,
+                    seconds_spent: row.get(8)?,
+                    last_attempt_id: row.get(9)?,
+                    updated_at: row.get(10)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(BasicError::from)
+}
+
+fn upsert_exercise_progress(
+    connection: &Connection,
+    progress: &ExerciseProgress,
+) -> Result<(), BasicError> {
+    connection.execute(
+        "INSERT INTO code_lab_exercise_progress
+         (exercise_id, status, attempts, solved_at, last_opened_at, best_tests_passed,
+          tests_total, best_score, seconds_spent, last_attempt_id, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+         ON CONFLICT(exercise_id) DO UPDATE SET
+             status = excluded.status,
+             attempts = excluded.attempts,
+             solved_at = excluded.solved_at,
+             last_opened_at = excluded.last_opened_at,
+             best_tests_passed = excluded.best_tests_passed,
+             tests_total = excluded.tests_total,
+             best_score = excluded.best_score,
+             seconds_spent = excluded.seconds_spent,
+             last_attempt_id = excluded.last_attempt_id,
+             updated_at = excluded.updated_at",
+        rusqlite::params![
+            progress.exercise_id,
+            progress.status.as_str(),
+            progress.attempts,
+            progress.solved_at,
+            progress.last_opened_at,
+            progress.best_tests_passed,
+            progress.tests_total,
+            progress.best_score,
+            progress.seconds_spent,
+            progress.last_attempt_id,
+            progress.updated_at
+        ],
+    )?;
+    Ok(())
 }
 
 fn read_lesson_progress(
@@ -617,5 +860,98 @@ mod tests {
         assert_eq!(first.test_spec.cases.len(), 4);
         assert_eq!(first.visible_cases().count(), 2);
         assert_eq!(first.hidden_case_count(), 2);
+    }
+
+    #[test]
+    fn opening_an_exercise_does_not_create_an_attempt() {
+        let mut database = seeded();
+        let id = list_exercises(&database, "csharp").unwrap()[0].id;
+        let progress = open_exercise(&mut database, id).unwrap();
+        assert_eq!(progress.status, ExerciseStatus::NotStarted);
+        assert_eq!(progress.attempts, 0);
+        assert!(progress.last_opened_at.is_some());
+        assert!(exercise_detail(&database, id).unwrap().is_some());
+    }
+
+    #[test]
+    fn drafts_and_attempts_are_persisted_together() {
+        use crate::code_lab::domain::{ExecutionPhase, ExecutionResult};
+
+        let mut database = seeded();
+        let id = list_exercises(&database, "csharp").unwrap()[0].id;
+        open_exercise(&mut database, id).unwrap();
+        save_draft(&mut database, id, "// código propio\n").unwrap();
+        assert_eq!(
+            load_draft(&database, id).unwrap().as_deref(),
+            Some("// código propio\n")
+        );
+
+        let failed = AttemptSummary {
+            status: AttemptStatus::Failed,
+            duration_ms: 1200,
+            tests_passed: 1,
+            tests_total: 4,
+            compile_ok: Some(true),
+            executions: vec![ExecutionResult {
+                phase: ExecutionPhase::Build,
+                command: "dotnet build".to_string(),
+                exit_code: Some(0),
+                stdout: "ok".to_string(),
+                stderr: String::new(),
+                duration_ms: 900,
+            }],
+        };
+        let attempt_id = record_attempt(&mut database, id, "// código propio\n", &failed).unwrap();
+        let progress = exercise_progress(&database, id).unwrap();
+        assert_eq!(progress.status, ExerciseStatus::Attempted);
+        assert_eq!(progress.attempts, 1);
+        assert_eq!(progress.best_tests_passed, 1);
+        assert!((progress.best_score - 0.25).abs() < f64::EPSILON);
+        assert_eq!(progress.last_attempt_id, Some(attempt_id));
+        assert_eq!(progress.seconds_spent, 0);
+
+        let stored_code: String = database
+            .connection()
+            .query_row(
+                "SELECT code FROM code_lab_attempt_code WHERE attempt_id = ?1",
+                [attempt_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(stored_code, "// código propio\n");
+        let executions: i64 = database
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM code_lab_executions WHERE attempt_id = ?1",
+                [attempt_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(executions, 1);
+
+        let passed = AttemptSummary {
+            status: AttemptStatus::Passed,
+            duration_ms: 2000,
+            tests_passed: 4,
+            tests_total: 4,
+            compile_ok: Some(true),
+            executions: Vec::new(),
+        };
+        record_attempt(&mut database, id, "solución", &passed).unwrap();
+        let solved = exercise_progress(&database, id).unwrap();
+        assert_eq!(solved.status, ExerciseStatus::Solved);
+        assert_eq!(solved.attempts, 2);
+        assert_eq!(solved.best_tests_passed, 4);
+        assert!(solved.solved_at.is_some());
+    }
+
+    #[test]
+    fn reference_solution_requires_an_explicit_read() {
+        let database = seeded();
+        let id = list_exercises(&database, "csharp").unwrap()[0].id;
+        let detail = exercise_detail(&database, id).unwrap().unwrap();
+        assert!(detail.starter_code.contains("TODO"));
+        let solution = reveal_solution(&database, id).unwrap().unwrap();
+        assert!(solution.contains("Console.WriteLine(a + b)"));
     }
 }

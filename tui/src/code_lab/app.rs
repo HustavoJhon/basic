@@ -1,9 +1,12 @@
 //! Casos de uso de Code Lab. No conoce Ratatui ni procesos externos.
 
-use crate::code_lab::domain::{Exercise, Lesson, LessonProgress, QuizResult};
+use crate::code_lab::domain::{
+    AttemptSummary, Exercise, ExerciseProgress, Lesson, LessonProgress, QuizResult,
+};
 use crate::code_lab::infra::{
-    LessonDetail, SeedReport, lesson_detail, lesson_progress, list_exercises, list_lessons,
-    open_lesson, record_lesson_time, seed_catalog, submit_quiz,
+    LessonDetail, SeedReport, exercise_detail, exercise_progress, lesson_detail, lesson_progress,
+    list_exercises, list_lessons, load_draft, open_exercise, open_lesson, record_attempt,
+    record_lesson_time, reveal_solution, save_draft, seed_catalog, submit_quiz,
 };
 use crate::error::BasicError;
 use crate::infra::sqlite::Database;
@@ -74,6 +77,40 @@ impl<'a> CodeLabService<'a> {
 
     pub fn record_time(&mut self, lesson_id: i64, seconds: i64) -> Result<(), BasicError> {
         record_lesson_time(self.database, lesson_id, seconds)
+    }
+
+    pub fn exercise_detail(&self, exercise_id: i64) -> Result<Option<Exercise>, BasicError> {
+        exercise_detail(self.database, exercise_id)
+    }
+
+    pub fn exercise_progress(&self, exercise_id: i64) -> Result<ExerciseProgress, BasicError> {
+        exercise_progress(self.database, exercise_id)
+    }
+
+    /// Abrir un ejercicio no cuenta como intento ni revela la solución.
+    pub fn open_exercise(&mut self, exercise_id: i64) -> Result<ExerciseProgress, BasicError> {
+        open_exercise(self.database, exercise_id)
+    }
+
+    pub fn draft(&self, exercise_id: i64) -> Result<Option<String>, BasicError> {
+        load_draft(self.database, exercise_id)
+    }
+
+    pub fn save_draft(&mut self, exercise_id: i64, code: &str) -> Result<(), BasicError> {
+        save_draft(self.database, exercise_id, code)
+    }
+
+    pub fn solution(&self, exercise_id: i64) -> Result<Option<String>, BasicError> {
+        reveal_solution(self.database, exercise_id)
+    }
+
+    pub fn record_attempt(
+        &mut self,
+        exercise_id: i64,
+        code: &str,
+        summary: &AttemptSummary,
+    ) -> Result<i64, BasicError> {
+        record_attempt(self.database, exercise_id, code, summary)
     }
 }
 
