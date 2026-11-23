@@ -1,0 +1,621 @@
+//! Persistencia de Code Lab. No depende de Ratatui ni de procesos externos.
+
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+use rusqlite::{Connection, OptionalExtension, Row};
+use serde::Serialize;
+
+use crate::code_lab::catalog::{TestCaseSeed, all_catalogs};
+use crate::code_lab::domain::{
+    AnswerResult, Example, Exercise, Lesson, LessonProgress, LessonStatus, QuizQuestion,
+    QuizResult, TestCase, TestSpec, lesson_status_after_open, lesson_status_after_quiz,
+};
+use crate::error::BasicError;
+use crate::infra::catalog::unix_now;
+use crate::infra::sqlite::Database;
+
+/// Detalle completo de una lección, incluido su cuestionario.
+#[derive(Debug, Clone)]
+pub struct LessonDetail {
+    pub lesson: Lesson,
+    pub questions: Vec<QuizQuestion>,
+}
+
+/// Resultado de poblar el catálogo.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct SeedReport {
+    pub languages: i32,
+    pub paths: i32,
+    pub lessons: i32,
+    pub questions: i32,
+    pub exercises: i32,
+}
+
+/// Inserta o actualiza el catálogo declarativo en una sola transacción.
+pub fn seed_catalog(database: &mut Database) -> Result<SeedReport, BasicError> {
+    let now = unix_now();
+    let mut report = SeedReport::default();
+    let transaction = database.connection_mut().transaction()?;
+
+    for catalog in all_catalogs() {
+        transaction.execute(
+            "INSERT INTO code_lab_languages (code, name, sdk_command, enabled)
+             VALUES (?1, ?2, ?3, 1)
+             ON CONFLICT(code) DO UPDATE SET
+                 name = excluded.name,
+                 sdk_command = excluded.sdk_command,
+                 enabled = 1",
+            rusqlite::params![
+                catalog.language.code,
+                catalog.language.name,
+                catalog.language.sdk_command
+            ],
+        )?;
+        report.languages += 1;
+
+        let mut path_ids = HashMap::new();
+        for path in catalog.paths {
+            transaction.execute(
+                "INSERT INTO code_lab_paths (language, slug, title, description, level)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(language, slug) DO UPDATE SET
+                     title = excluded.title,
+                     description = excluded.description,
+                     level = excluded.level",
+                rusqlite::params![
+                    catalog.language.code,
+                    path.slug,
+                    path.title,
+                    path.description,
+                    path.level
+                ],
+            )?;
+            let id: i64 = transaction.query_row(
+                "SELECT id FROM code_lab_paths WHERE language = ?1 AND slug = ?2",
+                rusqlite::params![catalog.language.code, path.slug],
+                |row| row.get(0),
+            )?;
+            path_ids.insert(path.slug, id);
+            report.paths += 1;
+        }
+
+        let mut lesson_ids = HashMap::new();
+        for lesson in catalog.lessons {
+            let path_id = path_ids.get(lesson.path_slug).copied().ok_or_else(|| {
+                BasicError::InvalidConfig {
+                    path: PathBuf::from("code_lab/catalog"),
+                    message: format!("ruta desconocida: {}", lesson.path_slug),
+                }
+            })?;
+            let concepts = to_json(&lesson.concepts)?;
+            transaction.execute(
+                "INSERT INTO code_lab_lessons
+                 (path_id, slug, title, summary, content_md, concepts_json,
+                  order_index, estimated_minutes, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                 ON CONFLICT(path_id, slug) DO UPDATE SET
+                     title = excluded.title,
+                     summary = excluded.summary,
+                     content_md = excluded.content_md,
+                     concepts_json = excluded.concepts_json,
+                     order_index = excluded.order_index,
+                     estimated_minutes = excluded.estimated_minutes",
+                rusqlite::params![
+                    path_id,
+                    lesson.slug,
+                    lesson.title,
+                    lesson.summary,
+                    lesson.content_md,
+                    concepts,
+                    lesson.order_index,
+                    lesson.estimated_minutes,
+                    now
+                ],
+            )?;
+            let lesson_id: i64 = transaction.query_row(
+                "SELECT id FROM code_lab_lessons WHERE path_id = ?1 AND slug = ?2",
+                rusqlite::params![path_id, lesson.slug],
+                |row| row.get(0),
+            )?;
+            lesson_ids.insert(lesson.slug, lesson_id);
+            report.lessons += 1;
+
+            for (index, question) in lesson.questions.iter().enumerate() {
+                let options = to_json(&question.options)?;
+                transaction.execute(
+                    "INSERT INTO code_lab_quiz_questions
+                     (lesson_id, prompt, options_json, correct_index, explanation, order_index)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                     ON CONFLICT(lesson_id, order_index) DO UPDATE SET
+                         prompt = excluded.prompt,
+                         options_json = excluded.options_json,
+                         correct_index = excluded.correct_index,
+                         explanation = excluded.explanation",
+                    rusqlite::params![
+                        lesson_id,
+                        question.prompt,
+                        options,
+                        i64::try_from(question.correct_index).unwrap_or(i64::MAX),
+                        question.explanation,
+                        i32::try_from(index).unwrap_or(i32::MAX)
+                    ],
+                )?;
+                report.questions += 1;
+            }
+        }
+
+        for exercise in catalog.exercises {
+            let path_id = path_ids.get(exercise.path_slug).copied();
+            let lesson_id = exercise
+                .lesson_slug
+                .and_then(|slug| lesson_ids.get(slug).copied());
+            let concepts = to_json(&exercise.concepts)?;
+            let examples = to_json(
+                &exercise
+                    .examples
+                    .iter()
+                    .map(|example| Example {
+                        input: example.input.to_string(),
+                        output: example.output.to_string(),
+                        explanation: if example.explanation.is_empty() {
+                            None
+                        } else {
+                            Some(example.explanation.to_string())
+                        },
+                    })
+                    .collect::<Vec<_>>(),
+            )?;
+            let constraints = to_json(&exercise.constraints)?;
+            let hints = to_json(&exercise.hints)?;
+            let test_spec = TestSpec {
+                cases: exercise.test_cases.iter().map(test_case_seed).collect(),
+                ..TestSpec::default()
+            };
+            let tests = to_json(&test_spec)?;
+            transaction.execute(
+                "INSERT INTO code_lab_exercises
+                 (language, path_id, lesson_id, slug, title, difficulty, topic, level,
+                  concepts_json, description_md, examples_json, constraints_json,
+                  hints_json, starter_code, reference_solution, test_spec_json, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+                 ON CONFLICT(language, slug) DO UPDATE SET
+                     path_id = excluded.path_id,
+                     lesson_id = excluded.lesson_id,
+                     title = excluded.title,
+                     difficulty = excluded.difficulty,
+                     topic = excluded.topic,
+                     level = excluded.level,
+                     concepts_json = excluded.concepts_json,
+                     description_md = excluded.description_md,
+                     examples_json = excluded.examples_json,
+                     constraints_json = excluded.constraints_json,
+                     hints_json = excluded.hints_json,
+                     starter_code = excluded.starter_code,
+                     reference_solution = excluded.reference_solution,
+                     test_spec_json = excluded.test_spec_json",
+                rusqlite::params![
+                    catalog.language.code,
+                    path_id,
+                    lesson_id,
+                    exercise.slug,
+                    exercise.title,
+                    exercise.difficulty.as_str(),
+                    exercise.topic,
+                    exercise.level,
+                    concepts,
+                    exercise.description_md,
+                    examples,
+                    constraints,
+                    hints,
+                    exercise.starter_code,
+                    exercise.reference_solution,
+                    tests,
+                    now
+                ],
+            )?;
+            report.exercises += 1;
+        }
+    }
+
+    transaction.commit()?;
+    Ok(report)
+}
+
+fn test_case_seed(case: &TestCaseSeed) -> TestCase {
+    TestCase {
+        name: case.name.to_string(),
+        input: case.input.to_string(),
+        expected_output: case.expected_output.to_string(),
+        visible: case.visible,
+    }
+}
+
+/// Lista las lecciones de un lenguaje en orden de la ruta.
+pub fn list_lessons(database: &Database, language: &str) -> Result<Vec<Lesson>, BasicError> {
+    let mut statement = database.connection().prepare(
+        "SELECT l.id, l.path_id, l.slug, l.title, l.summary, l.content_md,
+                l.concepts_json, l.order_index, l.estimated_minutes
+         FROM code_lab_lessons l
+         JOIN code_lab_paths p ON p.id = l.path_id
+         WHERE p.language = ?1
+         ORDER BY p.level, l.order_index, l.id",
+    )?;
+    let rows = statement.query_map([language], row_to_lesson)?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(BasicError::from)
+}
+
+/// Devuelve una lección con su cuestionario, o `None` si no existe.
+pub fn lesson_detail(
+    database: &Database,
+    lesson_id: i64,
+) -> Result<Option<LessonDetail>, BasicError> {
+    let connection = database.connection();
+    let Some(lesson) = connection
+        .query_row(
+            "SELECT id, path_id, slug, title, summary, content_md,
+                    concepts_json, order_index, estimated_minutes
+             FROM code_lab_lessons WHERE id = ?1",
+            [lesson_id],
+            row_to_lesson,
+        )
+        .optional()?
+    else {
+        return Ok(None);
+    };
+
+    let mut statement = connection.prepare(
+        "SELECT id, lesson_id, prompt, options_json, correct_index, explanation, order_index
+         FROM code_lab_quiz_questions WHERE lesson_id = ?1 ORDER BY order_index, id",
+    )?;
+    let questions = statement
+        .query_map([lesson_id], row_to_question)?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Some(LessonDetail { lesson, questions }))
+}
+
+/// Progreso actual de una lección; si no existe, devuelve un estado inicial.
+pub fn lesson_progress(database: &Database, lesson_id: i64) -> Result<LessonProgress, BasicError> {
+    Ok(
+        read_lesson_progress(database.connection(), lesson_id)?.unwrap_or_else(|| LessonProgress {
+            lesson_id,
+            ..LessonProgress::default()
+        }),
+    )
+}
+
+/// Abre una lección. Nunca la marca como completada.
+pub fn open_lesson(database: &mut Database, lesson_id: i64) -> Result<LessonProgress, BasicError> {
+    let now = unix_now();
+    let mut progress =
+        read_lesson_progress(database.connection(), lesson_id)?.unwrap_or_else(|| LessonProgress {
+            lesson_id,
+            ..LessonProgress::default()
+        });
+    progress.status = lesson_status_after_open(progress.status);
+    progress.last_opened_at = Some(now);
+    progress.updated_at = now;
+
+    let transaction = database.connection_mut().transaction()?;
+    upsert_lesson_progress(&transaction, &progress)?;
+    transaction.commit()?;
+    Ok(progress)
+}
+
+/// Acumula tiempo propio de Code Lab, sin tocar el Pomodoro.
+pub fn record_lesson_time(
+    database: &mut Database,
+    lesson_id: i64,
+    seconds: i64,
+) -> Result<(), BasicError> {
+    if seconds <= 0 {
+        return Ok(());
+    }
+    let now = unix_now();
+    let updated = database.connection().execute(
+        "UPDATE code_lab_lesson_progress
+         SET seconds_spent = seconds_spent + ?1, updated_at = ?2
+         WHERE lesson_id = ?3",
+        rusqlite::params![seconds, now, lesson_id],
+    )?;
+    if updated == 0 {
+        let progress = LessonProgress {
+            lesson_id,
+            status: LessonStatus::InProgress,
+            seconds_spent: seconds,
+            updated_at: now,
+            ..LessonProgress::default()
+        };
+        let transaction = database.connection_mut().transaction()?;
+        upsert_lesson_progress(&transaction, &progress)?;
+        transaction.commit()?;
+    }
+    Ok(())
+}
+
+/// Corrige un cuestionario y persiste el mejor resultado y el estado.
+pub fn submit_quiz(
+    database: &mut Database,
+    lesson_id: i64,
+    answers: &[Option<usize>],
+) -> Result<QuizResult, BasicError> {
+    let now = unix_now();
+    let detail = lesson_detail(database, lesson_id)?.ok_or_else(|| BasicError::InvalidConfig {
+        path: PathBuf::from("code_lab/lessons"),
+        message: format!("lección {lesson_id} no encontrada"),
+    })?;
+    let mut progress =
+        read_lesson_progress(database.connection(), lesson_id)?.unwrap_or_else(|| LessonProgress {
+            lesson_id,
+            ..LessonProgress::default()
+        });
+
+    let mut correct = 0;
+    let mut details = Vec::new();
+    for (index, question) in detail.questions.iter().enumerate() {
+        let answer = answers.get(index).copied().flatten();
+        let is_correct = answer.is_some_and(|value| question.is_correct(value));
+        if is_correct {
+            correct += 1;
+        }
+        details.push(AnswerResult {
+            question_id: question.id,
+            answer,
+            correct: is_correct,
+            correct_index: question.correct_index,
+            explanation: question.explanation.clone(),
+        });
+    }
+
+    let total = detail.questions.len() as i32;
+    let status = lesson_status_after_quiz(progress.status, correct, total);
+    progress.status = status;
+    progress.quiz_correct = correct;
+    progress.quiz_total = total;
+    if status == LessonStatus::Completed && progress.completed_at.is_none() {
+        progress.completed_at = Some(now);
+    }
+    if status == LessonStatus::NeedsReview {
+        progress.review_due_at = Some(now + 86_400);
+    }
+    progress.updated_at = now;
+
+    let transaction = database.connection_mut().transaction()?;
+    upsert_lesson_progress(&transaction, &progress)?;
+    transaction.commit()?;
+
+    Ok(QuizResult {
+        correct,
+        total,
+        status,
+        answers: details,
+    })
+}
+
+/// Lista los ejercicios de un lenguaje para futuras pantallas y seed.
+pub fn list_exercises(database: &Database, language: &str) -> Result<Vec<Exercise>, BasicError> {
+    let mut statement = database.connection().prepare(
+        "SELECT id, language, path_id, lesson_id, slug, title, difficulty,
+                topic, level, concepts_json, description_md, examples_json,
+                constraints_json, hints_json, starter_code, test_spec_json
+         FROM code_lab_exercises WHERE language = ?1
+         ORDER BY level, difficulty, id",
+    )?;
+    let rows = statement.query_map([language], |row| {
+        let difficulty = crate::code_lab::domain::Difficulty::parse(&row.get::<_, String>(6)?)
+            .ok_or_else(|| {
+                rusqlite::Error::InvalidColumnType(
+                    6,
+                    "difficulty".to_string(),
+                    rusqlite::types::Type::Text,
+                )
+            })?;
+        Ok(Exercise {
+            id: row.get(0)?,
+            language: row.get(1)?,
+            path_id: row.get(2)?,
+            lesson_id: row.get(3)?,
+            slug: row.get(4)?,
+            title: row.get(5)?,
+            difficulty,
+            topic: row.get(7)?,
+            level: row.get(8)?,
+            concepts: from_json(&row.get::<_, String>(9)?),
+            description_md: row.get(10)?,
+            examples: from_json(&row.get::<_, String>(11)?),
+            constraints: from_json(&row.get::<_, String>(12)?),
+            hints: from_json(&row.get::<_, String>(13)?),
+            starter_code: row.get(14)?,
+            test_spec: from_json(&row.get::<_, String>(15)?),
+        })
+    })?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(BasicError::from)
+}
+
+fn row_to_lesson(row: &Row<'_>) -> Result<Lesson, rusqlite::Error> {
+    Ok(Lesson {
+        id: row.get(0)?,
+        path_id: row.get(1)?,
+        slug: row.get(2)?,
+        title: row.get(3)?,
+        summary: row.get(4)?,
+        content_md: row.get(5)?,
+        concepts: from_json(&row.get::<_, String>(6)?),
+        order_index: row.get(7)?,
+        estimated_minutes: row.get(8)?,
+    })
+}
+
+fn row_to_question(row: &Row<'_>) -> Result<QuizQuestion, rusqlite::Error> {
+    Ok(QuizQuestion {
+        id: row.get(0)?,
+        lesson_id: row.get(1)?,
+        prompt: row.get(2)?,
+        options: from_json(&row.get::<_, String>(3)?),
+        correct_index: usize::try_from(row.get::<_, i64>(4)?).unwrap_or(usize::MAX),
+        explanation: row.get(5)?,
+        order_index: row.get(6)?,
+    })
+}
+
+fn read_lesson_progress(
+    connection: &Connection,
+    lesson_id: i64,
+) -> Result<Option<LessonProgress>, BasicError> {
+    connection
+        .query_row(
+            "SELECT lesson_id, status, last_opened_at, completed_at, quiz_correct,
+                    quiz_total, seconds_spent, review_due_at, updated_at
+             FROM code_lab_lesson_progress WHERE lesson_id = ?1",
+            [lesson_id],
+            |row| {
+                Ok(LessonProgress {
+                    lesson_id: row.get(0)?,
+                    status: LessonStatus::parse(&row.get::<_, String>(1)?),
+                    last_opened_at: row.get(2)?,
+                    completed_at: row.get(3)?,
+                    quiz_correct: row.get(4)?,
+                    quiz_total: row.get(5)?,
+                    seconds_spent: row.get(6)?,
+                    review_due_at: row.get(7)?,
+                    updated_at: row.get(8)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(BasicError::from)
+}
+
+fn upsert_lesson_progress(
+    connection: &Connection,
+    progress: &LessonProgress,
+) -> Result<(), BasicError> {
+    connection.execute(
+        "INSERT INTO code_lab_lesson_progress
+         (lesson_id, status, last_opened_at, completed_at, quiz_correct, quiz_total,
+          seconds_spent, review_due_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(lesson_id) DO UPDATE SET
+             status = excluded.status,
+             last_opened_at = excluded.last_opened_at,
+             completed_at = excluded.completed_at,
+             quiz_correct = excluded.quiz_correct,
+             quiz_total = excluded.quiz_total,
+             seconds_spent = excluded.seconds_spent,
+             review_due_at = excluded.review_due_at,
+             updated_at = excluded.updated_at",
+        rusqlite::params![
+            progress.lesson_id,
+            progress.status.as_str(),
+            progress.last_opened_at,
+            progress.completed_at,
+            progress.quiz_correct,
+            progress.quiz_total,
+            progress.seconds_spent,
+            progress.review_due_at,
+            progress.updated_at
+        ],
+    )?;
+    Ok(())
+}
+
+fn to_json<T: Serialize>(value: &T) -> Result<String, BasicError> {
+    Ok(serde_json::to_string(value)?)
+}
+
+fn from_json<T: serde::de::DeserializeOwned + Default>(text: &str) -> T {
+    serde_json::from_str(text).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn seeded() -> Database {
+        let mut database = Database::open_in_memory().unwrap();
+        seed_catalog(&mut database).unwrap();
+        database
+    }
+
+    fn first_lesson(database: &Database) -> i64 {
+        list_lessons(database, "csharp").unwrap()[0].id
+    }
+
+    #[test]
+    fn seed_is_idempotent() {
+        let mut database = seeded();
+        let first = seed_catalog(&mut database).unwrap();
+        let second = seed_catalog(&mut database).unwrap();
+        assert_eq!(first, second);
+        assert_eq!(first.lessons, 5);
+        assert_eq!(first.questions, 10);
+        assert_eq!(first.exercises, 6);
+        assert_eq!(list_lessons(&database, "csharp").unwrap().len(), 5);
+        assert_eq!(list_exercises(&database, "csharp").unwrap().len(), 6);
+    }
+
+    #[test]
+    fn opening_a_lesson_does_not_complete_it() {
+        let mut database = seeded();
+        let id = first_lesson(&database);
+        let progress = open_lesson(&mut database, id).unwrap();
+        assert_eq!(progress.status, LessonStatus::InProgress);
+        assert!(progress.completed_at.is_none());
+        assert!(progress.last_opened_at.is_some());
+        assert!(!lesson_status_after_open(LessonStatus::InProgress).unlocks_next());
+        let stored = lesson_progress(&database, id).unwrap();
+        assert_eq!(stored.status, LessonStatus::InProgress);
+    }
+
+    #[test]
+    fn quiz_completion_requires_every_answer() {
+        let mut database = seeded();
+        let id = first_lesson(&database);
+        open_lesson(&mut database, id).unwrap();
+
+        let partial = submit_quiz(&mut database, id, &[Some(0), Some(99)]).unwrap();
+        assert_eq!(partial.status, LessonStatus::NeedsReview);
+        assert_eq!(partial.correct, 1);
+        assert!(!partial.perfect());
+
+        let detail = lesson_detail(&database, id).unwrap().unwrap();
+        let answers: Vec<Option<usize>> = detail
+            .questions
+            .iter()
+            .map(|question| Some(question.correct_index))
+            .collect();
+        let perfect = submit_quiz(&mut database, id, &answers).unwrap();
+        assert_eq!(perfect.status, LessonStatus::Completed);
+        assert!(perfect.perfect());
+        let stored = lesson_progress(&database, id).unwrap();
+        assert_eq!(stored.quiz_correct, 2);
+        assert_eq!(stored.quiz_total, 2);
+        assert!(stored.completed_at.is_some());
+    }
+
+    #[test]
+    fn lesson_time_is_accumulated_separately() {
+        let mut database = seeded();
+        let id = first_lesson(&database);
+        open_lesson(&mut database, id).unwrap();
+        record_lesson_time(&mut database, id, 90).unwrap();
+        record_lesson_time(&mut database, id, 30).unwrap();
+        assert_eq!(lesson_progress(&database, id).unwrap().seconds_spent, 120);
+    }
+
+    #[test]
+    fn exercises_expose_starter_but_not_solution_through_the_domain() {
+        let database = seeded();
+        let exercises = list_exercises(&database, "csharp").unwrap();
+        let first = exercises
+            .iter()
+            .find(|exercise| exercise.slug == "suma-dos-numeros")
+            .unwrap();
+        assert!(first.starter_code.contains("TODO"));
+        assert_eq!(first.test_spec.cases.len(), 4);
+        assert_eq!(first.visible_cases().count(), 2);
+        assert_eq!(first.hidden_case_count(), 2);
+    }
+}
