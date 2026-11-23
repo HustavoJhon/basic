@@ -3,129 +3,160 @@
 <div align="center">
 
 <br />
-<div align="center">
-  <a href="https://github.com/hustavojhon/">
-      <img src="./assets/ghost.svg" alt="Logo" width="80" height="80">
-  </a>
-  <h3 align="center">basic</h3>
-  <p align="center">
-    Welcome to my basic project repository.
-    <br />
-    <a href="https://github.com/hustavojhon/"><strong>Explore the directories »<</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/hustavojhon/basic/resources">resources</a> 
-    ·
-    <a href="https://github.com/hustavojhon/basic/dev">dev</a> 
-    ·
-    <a href="https://github.com/hustavojhon/basic/tools">tools</a> 
-  </p>
+<img src="./assets/ghost.svg" alt="Logo de basic" width="80" height="80" />
+<h3>basic</h3>
+<p>
+  Vault de Markdown para aprendizaje y conocimiento personal,
+  con una TUI propia para indexar, explorar, repasar y practicar código.
+</p>
 
-[![Discord](https://img.shields.io/badge/Discord-5865F2.svg?style=for-the-badge&logo=Discord&logoColor=white)](./resources/development/Python/)
-[![stars](https://img.shields.io/github/stars/hustavojhon/basic?style=for-the-badge&logo=github&label=Stars&color=F5C518)](#)
-[![following](https://img.shields.io/github/followers/hustavojhon?style=for-the-badge&logo=github&label=Following&color=FF6B6B)](#)
-[![license](https://img.shields.io/github/license/hustavojhon/basic?style=for-the-badge&logo=scale&color=6BCB77)](#)
-</div>
-</div>
+[![stars](https://img.shields.io/github/stars/hustavojhon/basic?style=for-the-badge&logo=github&label=Stars&color=F5C518)](https://github.com/hustavojhon/basic/stargazers)
+[![CI](https://img.shields.io/github/actions/workflow/status/hustavojhon/basic/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/hustavojhon/basic/actions/workflows/ci.yml)
 
+</div>
 
 ---
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-    <ol>
-      <li>
-        <a href="#about-the-project">About The Project</a>
-        <lu>
-          <li>
-            <a href="#built-with">Built Width</a>
-          </li>
-        </lu>
-      </li>
-      <li><a href="#structure">Structure</a></li>
-      <li><a href="#usage">Usage</a></li>
-      <li><a href="#roadmap">Roadmap</a></li>
-      <li><a href="#resources">Resources</a></li>
-      <li><a href="#license">License</a></li>
-      <li><a href="#contact">Contact</a></li>
-    </ol>
-</details>
+## Tabla de contenidos
+
+- [Acerca del proyecto](#acerca-del-proyecto)
+- [Inicio rápido](#inicio-rápido)
+- [Qué incluye](#qué-incluye)
+- [Estructura](#estructura)
+- [Documentación](#documentación)
+- [Tecnologías](#tecnologías)
+- [Contenido por sección](#contenido-por-sección)
+- [Recursos de aprendizaje](#recursos-de-aprendizaje)
+- [Contacto](#contacto)
 
 ---
 
-## Structure
+## Acerca del proyecto
 
-<details>
-  <summary>tree</summary>
+Este repositorio es dos cosas a la vez:
 
+1. **Un vault de Markdown** (compatible con Obsidian) donde guardo apuntes de
+   arquitectura, desarrollo, Linux, herramientas y aprendizaje en general.
+2. **BASIC**, una aplicación de terminal escrita en Rust que indexa ese vault,
+   ofrece búsqueda, repaso espaciado, Pomodoro, estadísticas y un laboratorio
+   de código (Code Lab) con ejercicios reales de C#.
+
+El principio central es simple: **Markdown es la fuente de verdad; SQLite es
+solo un índice y un registro de estado**. La aplicación nunca reescribe una
+nota existente y la base de datos puede reconstruirse escaneando el vault.
+
+---
+
+## Inicio rápido
+
+```bash
+cd tui
+cargo build --release
+./target/release/basic config init
+./target/release/basic index
+./target/release/basic tui
 ```
+
+La guía completa de comandos, atajos, configuración y arquitectura está en
+[`tui/README.md`](tui/README.md). Para verificar el entorno sin abrir la
+interfaz: `basic doctor --strict`.
+
+---
+
+## Qué incluye
+
+### BASIC TUI (F2–F22)
+
+- Interfaz Ratatui con tema Gruvbox, adaptable a terminales estrechas.
+- Indexado incremental con FTS5 e insensible a acentos.
+- Explorador, búsqueda difusa y de contenido, visor Markdown y creación
+  segura de notas.
+- Learning Mode, Pomodoro con persistencia y estadísticas con heatmap.
+- Repaso tipo SM-2 para notas y conceptos.
+
+### Code Lab
+
+- Catálogo declarativo de lecciones y ejercicios de C# con semilla idempotente.
+- Editor de código en la TUI, borradores y ejecución síncrona con el SDK local
+  en un workspace temporal fuera del vault.
+- Casos de prueba visibles y ocultos, timeouts y solución solo bajo petición.
+- Dificultad, progreso de lecciones, intentos y conceptos con repaso SM-2.
+- Notas enlazadas en el vault con navegación inversa al origen.
+- Objetivos diarios configurables e informes Markdown/JSON.
+
+Los detalles de cada fase están en [`docs/design/`](docs/design/).
+
+---
+
+## Estructura
+
+```text
 basic/
-├── arquitecture/          # Patrones y principios de arquitectura
-├── development/           # Lenguajes y frameworks
-│   ├── api/                  # Diseño y consumo de APIs
-│   ├── java/                 # Fundamentos de Java
-│   ├── javascript/           # JavaScript moderno (ES6+)
-│   │   ├── 0 Introduccion/   # Conceptos base
-│   │   ├── 1 Fundamentals/    # Variables, primitivos, funciones
-│   │   ├── 3 Control Structure/  # Operadores y condicionales
-│   │   └── Ejercicios/       # Ejercicios prácticos
-│   └── rocketbot/            # Automatización con Rocketbot
-├── learning/              # Tecnologías emergentes y especializadas
-│   ├── blockchain/           # Fundamentos de blockchain
-│   ├── latex/                # Composición tipográfica
-│   └── resources/            # Recursos de aprendizaje
-├── tools/                 # Herramientas de desarrollo
-│   ├── docker/               # Contenedores y Docker Compose
-│   ├── git/                  # Control de versiones
-│   └── github/               # Workflows y GitHub Actions
-└── linux/                # Administración Linux
-    ├── command/              # Comandos esenciales
-    ├── security/            # Seguridad en sistemas
-    ├── termux/              # Termux en Android
-    └── vim/                 # Editor Vim/Neovim
+├── tui/                   # aplicación BASIC (Rust, Ratatui, SQLite)
+│   ├── src/               # dominio, app, infra, ui y code_lab
+│   ├── migrations/        # esquema SQLite versionado (v1–v5)
+│   ├── tests/             # pruebas de extremo a extremo del CLI
+│   └── README.md          # guía de uso y arquitectura
+├── docs/design/           # auditorías y decisiones de cada fase
+├── arquitecture/          # patrones y principios de arquitectura
+├── development/           # lenguajes y frameworks
+│   ├── api/               # diseño y consumo de APIs
+│   ├── java/              # fundamentos de Java
+│   ├── javascript/        # JavaScript moderno (ES6+)
+│   └── rocketbot/         # automatización con Rocketbot
+├── learning/              # tecnologías emergentes y especializadas
+│   ├── blockchain/        # fundamentos de blockchain
+│   ├── latex/             # composición tipográfica
+│   └── resources/         # recursos de aprendizaje
+├── tools/                 # herramientas de desarrollo
+│   ├── docker/            # contenedores y Docker Compose
+│   ├── git/               # control de versiones
+│   └── github/            # workflows y GitHub Actions
+├── linux/                 # administración Linux
+│   ├── command/           # comandos esenciales
+│   ├── security/          # seguridad en sistemas
+│   ├── termux/            # Termux en Android
+│   └── vim/               # editor Vim/Neovim
+├── resources/             # material de apoyo
+├── assets/                # imágenes del repositorio
+└── .github/workflows/     # CI: fmt, clippy, tests y build release
 ```
 
-</details>
+---
+
+## Documentación
+
+| Documento | Contenido |
+|---|---|
+| [`tui/README.md`](tui/README.md) | Instalación, comandos, atajos, configuración y arquitectura |
+| [`docs/design/F0-audit.md`](docs/design/F0-audit.md) | Auditoría inicial y arquitectura aprobada |
+| [`docs/design/F12-audit.md`](docs/design/F12-audit.md) | Estabilización de F2–F11 y hoja de ruta |
+| [`docs/design/`](docs/design/) | Diseño de las fases F13–F22 |
 
 ---
 
 ## Tecnologías
 
-### Lenguajes de programación
 <div align="left">
 
+![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white&labelColor=DEA584)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white&labelColor=003B57)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black&labelColor=F7DF1E)
 ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat-square&logo=openjdk&logoColor=white&labelColor=ED8B00)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white&labelColor=00ADD8)
+![C#](https://img.shields.io/badge/C%23-239120?style=flat-square&logo=csharp&logoColor=white&labelColor=239120)
 ![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnu-bash&logoColor=white&labelColor=4EAA25)
 
 </div>
 
-### Frameworks y automatización
 <div align="left">
 
-![Rocketbot](https://img.shields.io/badge/Rocketbot-D33847?style=flat-square&logo=rocket&logoColor=white&labelColor=D33847)
+![Ratatui](https://img.shields.io/badge/Ratatui-7B3FE4?style=flat-square&logo=ratatui&logoColor=white&labelColor=7B3FE4)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white&labelColor=2496ED)
-
-</div>
-
-### Herramientas
-<div align="left">
-
 ![Git](https://img.shields.io/badge/Git-F05032?style=flat-square&logo=git&logoColor=white&labelColor=F05032)
-![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white&labelColor=181717)
-![Vim](https://img.shields.io/badge/Vim-019733?style=flat-square&logo=vim&logoColor=019733)
+![Vim](https://img.shields.io/badge/Vim-019733?style=flat-square&logo=vim&logoColor=white&labelColor=019733)
 ![Neovim](https://img.shields.io/badge/Neovim-57A64A?style=flat-square&logo=neovim&logoColor=white&labelColor=57A64A)
-
-</div>
-
-### Áreas de estudio
-<div align="left">
-
-![Blockchain](https://img.shields.io/badge/Blockchain-4A90E2?style=flat-square&logo=bitcoin&logoColor=white&labelColor=4A90E2)
-![LaTeX](https://img.shields.io/badge/LaTeX-008080?style=flat-square&logo=overleaf&logoColor=white&labelColor=008080)
-![Linux](https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black&labelColor=FCC624)
+![Obsidian](https://img.shields.io/badge/Obsidian-7C3AED?style=flat-square&logo=obsidian&logoColor=white&labelColor=7C3AED)
 
 </div>
 
@@ -134,48 +165,55 @@ basic/
 ## Contenido por sección
 
 ### Arquitecture
-Patrones de diseño, principios SOLID, arquitectura hexagonal y mejores prácticas para estructurar código escalable.
+
+Patrones de diseño, principios SOLID, arquitectura hexagonal y mejores
+prácticas para estructurar código escalable.
 
 ### Development
 
-| Tema           | Descripción                                 |
-| -------------- | ------------------------------------------- |
-| **API**        | REST, GraphQL, consumo de servicios RESTful |
-| **JAVA**       | Fundamentos, POO, Spring Boot               |
+| Tema | Descripción |
+|---|---|
+| **API** | REST, GraphQL, consumo de servicios RESTful |
+| **JAVA** | Fundamentos, POO, Spring Boot |
 | **JAVASCRIPT** | Desde cero hasta conceptos avanzados (ES6+) |
-| **ROCKETBOT**  | Automatización de tareas y procesos         |
+| **ROCKETBOT** | Automatización de tareas y procesos |
 
 ### Learning
-- **Blockchain**: Contratos inteligentes, Ethereum, wallets
-- **LaTeX**: Documentación técnica profesional
-- **Recursos**: Links útiles para seguir aprendiendo
+
+- **Blockchain**: contratos inteligentes, Ethereum, wallets.
+- **LaTeX**: documentación técnica profesional.
+- **Recursos**: enlaces útiles para seguir aprendiendo.
 
 ### Tools
-- **Docker**: Containers, Compose, networking
-- **Git**: Versionado, branching, merge strategies
-- **GitHub**: Actions, Codespaces, colaboración
+
+- **Docker**: contenedores, Compose, networking.
+- **Git**: versionado, branching, estrategias de merge.
+- **GitHub**: Actions, Codespaces, colaboración.
 
 ### Linux
-- **Comandos**: Los esenciales del día a día
-- **Seguridad**: Hardening, permisos, SSH
-- **Termux**: Linux en tu Android
-- **Vim/Neovim**: Productividad en el editor
+
+- **Comandos**: los esenciales del día a día.
+- **Seguridad**: hardening, permisos, SSH.
+- **Termux**: Linux en Android.
+- **Vim/Neovim**: productividad en el editor.
 
 ---
 
 ## Recursos de aprendizaje
 
-Estos son algunos de los recursos que uso para aprender:
+- [Project Based Learning](https://github.com/practical-tutorials/project-based-learning) — aprende construyendo proyectos reales.
+- [Coddy.tech](https://coddy.tech/) — cursos interactivos.
+- [Guía de entrevistas de programación](https://github.com/DevCaress/guia-entrevistas-de-programacion) — preparación técnica.
+- [Programación en Java](https://www.politecnicodecolombia.edu.co/diplomados-virtuales-gratis/escuela-de-informacion/programacion-en-java.html) — diplomados virtuales gratis.
 
-- [Project Based Learning](https://github.com/practical-tutorials/project-based-learning) — Aprende construyendo proyectos reales
-- [Coddy.tech](https://coddy.tech/) — Plataforma de cursos interactivos
-- [Guía de Entrevistas de Programación](https://github.com/DevCaress/guia-entrevistas-de-programacion) — Preparación para entrevistas técnicas
-- [Programacion en java](https://www.politecnicodecolombia.edu.co/diplomados-virtuales-gratis/escuela-de-informacion/programacion-en-java.html) - Diplomados virtuales gratis
+---
+
+## Contacto
+
+[hustavojhon](https://github.com/hustavojhon)
 
 <div align="center">
 
 **[⬆ Volver arriba](#readme-top)**
-|---
-| Hecho con 💻 y ☕ por [hustavojhon](https://github.com/hustavojhon)
 
 </div>

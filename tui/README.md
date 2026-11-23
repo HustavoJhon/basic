@@ -2,15 +2,29 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
+Markdown es la fuente de verdad; SQLite es índice y estado complementario.
+Las notas existentes nunca se reescriben automáticamente.
+
 > Estado: **F2–F22 implementadas**. Incluye TUI Gruvbox, indexado incremental,
 > explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
 > Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Code Lab añade el
 > esquema v5, el dominio del lenguaje, el editor TUI reutilizable, el runner
 > síncrono de C#, lecciones con cuestionario, ejercicios con borradores e
-> intentos, filtro por dificultad, repaso de conceptos, estadísticas propias y
-> notas Markdown enlazadas.
-> Markdown es la fuente de verdad; SQLite es índice y estado complementario.
-> Las notas existentes nunca se reescriben automáticamente.
+> intentos, filtro por dificultad, repaso de conceptos, estadísticas propias,
+> notas Markdown enlazadas, objetivos diarios y exportación del progreso.
+
+## Inicio rápido
+
+```bash
+cd tui
+cargo build --release
+./target/release/basic config init   # crea ~/.config/basic/config.toml
+./target/release/basic index         # indexa el vault Markdown
+./target/release/basic tui           # abre la interfaz
+```
+
+Edita `vault` en `~/.config/basic/config.toml` si el detectado no es el correcto.
+Para comprobar la instalación sin abrir la TUI: `basic doctor --strict`.
 
 ## Requisitos
 
@@ -146,8 +160,8 @@ todas las respuestas son correctas; abrirla no la completa.
 
 Los conceptos de lecciones y ejercicios se registran automáticamente en una
 cola de repaso. Pulsa `8` para ver el concepto actual, califícalo con `1`–`4` y
-el siguiente seprograma con la misma curva SM-2 que el repaso de notas. El tiempo
-de repaso no se añade al Pomodoro.
+el siguiente se programa con la misma curva SM-2 que el repaso de notas. El
+tiempo de repaso no se añade al Pomodoro.
 
 La pantalla de estadísticas muestra, junto al heatmap, las lecciones
 completadas, los ejercicios resueltos, los intentos superados, los conceptos
@@ -244,6 +258,10 @@ long_break_minutes = 15
 long_break_every = 4
 auto_start_next = false
 
+[code_lab]
+daily_lessons = 1
+daily_exercises = 2
+
 [ui]
 icons = "ascii"
 mouse = false
@@ -270,6 +288,10 @@ Notas sobre la configuración:
 - Los tiempos de Pomodoro y `auto_start_next` se aplican en la TUI. Si la
   aplicación se cierra a mitad de una sesión, `pomodoro_runtime` permite saber
   que quedó una sesión abierta.
+- `code_lab.daily_lessons` y `code_lab.daily_exercises` fijan los objetivos
+  diarios que aparecen en estadísticas. `doctor` valida los rangos (0–20 y
+  0–50). El bloque es opcional: los archivos de configuración antiguos siguen
+  siendo válidos.
 
 ## Logging
 
@@ -338,29 +360,55 @@ La auditoría, la arquitectura y la hoja de ruta están en
 | F8 | Pomodoro con fases, ciclos y persistencia |
 | F9 | Estadísticas, actividad diaria y heatmap |
 | F10 | Repaso con SM-2 simplificado |
+| F11 | Pruebas de integración, documentación y hardening final |
+| F12 | Auditoría y estabilización de F2–F11 |
+| F13 | Dominio de Code Lab y esquema v2 |
+| F14 | Editor TUI reutilizable |
+| F15 | Runner síncrono de C# con projects temporales |
+| F16 | Catálogo declarativo, lecciones y seed idempotente |
+| F17 | Borradores, intentos y código por intento (esquema v4) |
+| F18 | Ejercicios verificados con SDK y filtro por dificultad |
+| F19 | Conceptos, repaso SM-2 y estadísticas de Code Lab |
+| F20 | Enlaces a notas Markdown del vault (esquema v5) |
+| F21 | Marcador de origen en la nota y plantillas por lenguaje |
+| F22 | Objetivos diarios y exportación del progreso |
+
+La auditoría inicial y el detalle de cada fase están en
+[`../docs/design/`](../docs/design/).
 
 Pendiente para una fase posterior: resaltado de sintaxis por lenguaje,
-renderizado real de imágenes, edición embebida y temas alternativos.
+renderizado real de imágenes y temas alternativos.
 
 ## Arquitectura
 
 ```text
 src/
-├── main.rs          # composition root y despacho CLI
-├── cli.rs           # comandos clap
-├── domain.rs        # modelos, SM-2, actividad y formato
-├── app.rs           # estado, acciones y Pomodoro (sin Ratatui)
-├── ui.rs            # pantallas Ratatui, eventos y tema Gruvbox
-├── ui/markdown.rs   # Markdown a líneas de Ratatui
-└── infra/
-    ├── markdown.rs  # metadatos, etiquetas, enlaces y excerpt
-    ├── index.rs     # escaneo, upsert, FTS, tags y enlaces
-    ├── catalog.rs   # consultas, búsqueda, estadísticas, repaso y Pomodoro
-    ├── notes.rs     # creación de notas con frontmatter
-    ├── sqlite.rs    # apertura, migraciones y conexión
-    └── fs.rs        # escritura atómica
+├── main.rs            # composition root y despacho CLI
+├── cli.rs             # comandos clap
+├── lib.rs             # biblioteca compartida con las pruebas
+├── config.rs          # configuración XDG y validación
+├── doctor.rs          # diagnósticos legibles y JSON
+├── paths.rs           # rutas XDG y expansión de ~
+├── logging.rs         # archivo rotado, nunca stdout
+├── domain.rs          # modelos, SM-2, actividad y formato
+├── error.rs           # errores tipados
+├── app.rs             # estado, acciones y prompts (sin Ratatui)
+├── ui.rs              # pantallas Ratatui, eventos y tema Gruvbox
+├── ui/markdown.rs     # Markdown a líneas de Ratatui
+├── infra/
+│   ├── markdown.rs    # metadatos, etiquetas, enlaces y excerpt
+│   ├── index.rs       # escaneo, upsert, FTS, tags y enlaces
+│   ├── catalog.rs     # consultas, búsqueda, estadísticas y repaso
+│   ├── notes.rs       # creación de notas con frontmatter
+│   ├── sqlite.rs      # apertura, migraciones y conexión
+│   └── fs.rs          # escritura atómica
+└── code_lab/
+    ├── domain.rs      # catálogo, progreso, notas y plantillas
+    ├── app.rs         # servicios: seed, lecciones, intentos, repaso, informe
+    ├── infra.rs       # SQL de Code Lab y acceso a SQLite
+    └── ui/            # editor y pantallas específicas del laboratorio
 ```
 
-Markdown es la fuente de verdad. `app` e `infra` no dependen de Ratatui; `ui`
-solo presenta y traduce eventos. Esto mantiene la lógica de repaso, Pomodoro e
-indexado comprobable sin terminal.
+Markdown es la fuente de verdad. `app`, `infra` y `code_lab` no dependen de
+Ratatui; `ui` solo presenta y traduce eventos. Esto mantiene la lógica de
+repaso, Pomodoro, indexado y progreso comprobable sin terminal.
