@@ -32,6 +32,7 @@ pub struct Config {
     pub scan: ScanConfig,
     pub pomodoro: PomodoroConfig,
     pub ui: UiConfig,
+    pub code_lab: CodeLabConfig,
 }
 
 impl Default for Config {
@@ -46,6 +47,7 @@ impl Default for Config {
             scan: ScanConfig::default(),
             pomodoro: PomodoroConfig::default(),
             ui: UiConfig::default(),
+            code_lab: CodeLabConfig::default(),
         }
     }
 }
@@ -164,6 +166,13 @@ impl Config {
         }
         if !(1..=12).contains(&pomodoro.long_break_every) {
             issues.push("pomodoro.long_break_every debe estar entre 1 y 12".to_string());
+        }
+
+        if !(0..=20).contains(&self.code_lab.daily_lessons) {
+            issues.push("code_lab.daily_lessons debe estar entre 0 y 20".to_string());
+        }
+        if !(0..=50).contains(&self.code_lab.daily_exercises) {
+            issues.push("code_lab.daily_exercises debe estar entre 0 y 50".to_string());
         }
 
         issues
@@ -305,6 +314,23 @@ impl Default for UiConfig {
     }
 }
 
+/// Objetivos diarios de práctica en Code Lab.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CodeLabConfig {
+    pub daily_lessons: i32,
+    pub daily_exercises: i32,
+}
+
+impl Default for CodeLabConfig {
+    fn default() -> Self {
+        Self {
+            daily_lessons: 1,
+            daily_exercises: 2,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum IconSet {
@@ -391,6 +417,26 @@ mod tests {
         assert_eq!(config.pomodoro.focus_minutes, 25);
         assert_eq!(config.ui.icons, IconSet::Ascii);
         assert!(config.validate().is_empty());
+    }
+
+    #[test]
+    fn code_lab_goals_have_defaults_and_are_validated() {
+        let config: Config = toml::from_str("vault = \"~/vault\"\n").unwrap();
+        assert_eq!(config.code_lab.daily_lessons, 1);
+        assert_eq!(config.code_lab.daily_exercises, 2);
+
+        let bad = Config {
+            code_lab: CodeLabConfig {
+                daily_lessons: -1,
+                ..CodeLabConfig::default()
+            },
+            ..Config::default()
+        };
+        assert!(
+            bad.validate()
+                .iter()
+                .any(|issue| issue.contains("daily_lessons"))
+        );
     }
 
     #[test]

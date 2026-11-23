@@ -746,6 +746,55 @@ impl CodeLabStats {
     }
 }
 
+/// Objetivo diario de una actividad de Code Lab.
+#[derive(Debug, Clone, Serialize)]
+pub struct DailyGoal {
+    pub label: &'static str,
+    pub target: i32,
+    pub done: i32,
+}
+
+impl DailyGoal {
+    pub fn complete(&self) -> bool {
+        self.done >= self.target
+    }
+}
+
+/// Avance de los objetivos del día; `day` usa el formato `YYYY-MM-DD`.
+#[derive(Debug, Clone, Serialize)]
+pub struct DailyProgress {
+    pub day: String,
+    pub lessons: DailyGoal,
+    pub exercises: DailyGoal,
+}
+
+impl Default for DailyProgress {
+    fn default() -> Self {
+        Self {
+            day: String::new(),
+            lessons: DailyGoal {
+                label: "lecciones",
+                target: 0,
+                done: 0,
+            },
+            exercises: DailyGoal {
+                label: "ejercicios",
+                target: 0,
+                done: 0,
+            },
+        }
+    }
+}
+
+/// Informe exportable con el estado agregado del laboratorio.
+#[derive(Debug, Clone, Serialize)]
+pub struct ProgressReport {
+    pub generated_at: i64,
+    pub stats: CodeLabStats,
+    pub daily: DailyProgress,
+    pub note_links: Vec<NoteLink>,
+}
+
 /// Abrir una lección nunca la marca como completada.
 pub fn lesson_status_after_open(current: LessonStatus) -> LessonStatus {
     match current {

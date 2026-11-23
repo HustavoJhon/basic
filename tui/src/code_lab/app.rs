@@ -1,15 +1,16 @@
 //! Casos de uso de Code Lab. No conoce Ratatui ni procesos externos.
 
 use crate::code_lab::domain::{
-    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, DEFAULT_LANGUAGE, Exercise,
-    ExerciseProgress, Lesson, LessonProgress, NoteItemType, NoteLink, QuizResult,
+    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, DEFAULT_LANGUAGE, DailyProgress,
+    Exercise, ExerciseProgress, Lesson, LessonProgress, NoteItemType, NoteLink, ProgressReport,
+    QuizResult,
 };
 use crate::code_lab::infra::{
-    LessonDetail, SeedReport, code_lab_stats, concept, due_concepts, exercise_detail,
-    exercise_progress, learning_items, lesson_detail, lesson_progress, list_exercises,
-    list_lessons, load_draft, note_link, note_links, open_exercise, open_lesson, rate_concept,
-    record_attempt, record_lesson_time, reveal_solution, save_draft, save_note_link, seed_catalog,
-    submit_quiz,
+    LessonDetail, SeedReport, code_lab_stats, concept, daily_progress, due_concepts,
+    exercise_detail, exercise_progress, learning_items, lesson_detail, lesson_progress,
+    list_exercises, list_lessons, load_draft, note_link, note_links, open_exercise, open_lesson,
+    rate_concept, record_attempt, record_lesson_time, reveal_solution, save_draft, save_note_link,
+    seed_catalog, submit_quiz,
 };
 use crate::domain::{ReviewOutcome, ReviewRating};
 use crate::error::BasicError;
@@ -158,6 +159,28 @@ impl<'a> CodeLabService<'a> {
 
     pub fn note_links(&self) -> Result<Vec<NoteLink>, BasicError> {
         note_links(self.database)
+    }
+
+    pub fn daily_progress(
+        &self,
+        lesson_target: i32,
+        exercise_target: i32,
+    ) -> Result<DailyProgress, BasicError> {
+        daily_progress(self.database, lesson_target, exercise_target)
+    }
+
+    /// Informe completo para exportar sin acceder a servicios externos.
+    pub fn report(
+        &self,
+        lesson_target: i32,
+        exercise_target: i32,
+    ) -> Result<ProgressReport, BasicError> {
+        Ok(ProgressReport {
+            generated_at: crate::infra::catalog::unix_now(),
+            stats: self.stats()?,
+            daily: self.daily_progress(lesson_target, exercise_target)?,
+            note_links: self.note_links()?,
+        })
     }
 }
 

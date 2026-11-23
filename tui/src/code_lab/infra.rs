@@ -3,15 +3,16 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use chrono::Local;
 use rusqlite::{Connection, OptionalExtension, Row};
 use serde::Serialize;
 
 use crate::code_lab::catalog::{TestCaseSeed, all_catalogs};
 use crate::code_lab::domain::{
-    AnswerResult, AttemptStatus, AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, Example,
-    Exercise, ExerciseProgress, ExerciseStatus, ItemType, Lesson, LessonProgress, LessonStatus,
-    NoteItemType, NoteLink, QuizQuestion, QuizResult, TestCase, TestSpec, lesson_status_after_open,
-    lesson_status_after_quiz,
+    AnswerResult, AttemptStatus, AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview,
+    DailyGoal, DailyProgress, Example, Exercise, ExerciseProgress, ExerciseStatus, ItemType,
+    Lesson, LessonProgress, LessonStatus, NoteItemType, NoteLink, QuizQuestion, QuizResult,
+    TestCase, TestSpec, lesson_status_after_open, lesson_status_after_quiz,
 };
 use crate::domain::{ReviewOutcome, ReviewRating, schedule_review};
 use crate::error::BasicError;
@@ -771,6 +772,43 @@ pub fn learning_items(database: &Database) -> Result<Vec<CodeLabItem>, BasicErro
         .map_err(BasicError::from)
 }
 
+/// Avance de hoy frente a los objetivos configurados.
+pub fn daily_progress(
+    database: &Database,
+    lesson_target: i32,
+    exercise_target: i32,
+) -> Result<DailyProgress, BasicError> {
+    let now = Local::now();
+    let day = now.format("%Y-%m-%d").to_string();
+    let start = now
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .map(|midnight| midnight.and_utc().timestamp())
+        .unwrap_or(0);
+    let (lessons_done, exercises_done) = database.connection().query_row(
+        "SELECT
+            (SELECT count(*) FROM code_lab_lesson_progress
+             WHERE status = 'completed' AND completed_at >= ?1),
+            (SELECT count(DISTINCT exercise_id) FROM code_lab_attempts
+             WHERE status = 'passed' AND created_at >= ?1)",
+        [start],
+        |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
+    )?;
+    Ok(DailyProgress {
+        day,
+        lessons: DailyGoal {
+            label: "lecciones",
+            target: lesson_target,
+            done: i32::try_from(lessons_done).unwrap_or(i32::MAX),
+        },
+        exercises: DailyGoal {
+            label: "ejercicios",
+            target: exercise_target,
+            done: i32::try_from(exercises_done).unwrap_or(i32::MAX),
+        },
+    })
+}
+
 /// Nota enlazada con un elemento concreto de Code Lab.
 pub fn note_link(
     database: &Database,
@@ -1294,6 +1332,40 @@ mod tests {
                 .iter()
                 .any(|item| item.id == exercise && item.kind == ItemType::Exercise)
         );
+    }
+
+    #[test]
+    fn daily_progress_counts_todays_completions() {
+        let mut database = seeded();
+        let lesson = first_lesson(&database);
+        open_lesson(&mut database, lesson).unwrap();
+        let now = crate::infra::catalog::unix_now();
+        database
+            .connection()
+            .execute(
+                "UPDATE code_lab_lesson_progress
+                 SET status = 'completed', completed_at = ?1 WHERE lesson_id = ?2",
+                rusqlite::params![now, lesson],
+            )
+            .unwrap();
+
+        let exercise = list_exercises(&database, "csharp").unwrap()[0].id;
+        let passed = AttemptSummary {
+            status: AttemptStatus::Passed,
+            duration_ms: 100,
+            tests_passed: 4,
+            tests_total: 4,
+            compile_ok: Some(true),
+            executions: Vec::new(),
+        };
+        record_attempt(&mut database, exercise, "código", &passed).unwrap();
+
+        let progress = daily_progress(&database, 2, 3).unwrap();
+        assert_eq!(progress.lessons.done, 1);
+        assert_eq!(progress.exercises.done, 1);
+        assert_eq!(progress.lessons.target, 2);
+        assert!(!progress.lessons.complete());
+        assert!(!progress.day.is_empty());
     }
 
     #[test]
