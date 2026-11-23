@@ -333,6 +333,49 @@ impl Lesson {
     }
 }
 
+/// Pregunta de opción múltiple asociada a una lección.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuizQuestion {
+    pub id: i64,
+    pub lesson_id: i64,
+    pub prompt: String,
+    pub options: Vec<String>,
+    pub correct_index: usize,
+    pub explanation: String,
+    pub order_index: i32,
+}
+
+impl QuizQuestion {
+    pub fn is_correct(&self, answer: usize) -> bool {
+        answer == self.correct_index
+    }
+}
+
+/// Resultado de una respuesta concreta del cuestionario.
+#[derive(Debug, Clone)]
+pub struct AnswerResult {
+    pub question_id: i64,
+    pub answer: Option<usize>,
+    pub correct: bool,
+    pub correct_index: usize,
+    pub explanation: String,
+}
+
+/// Resultado agregado del cuestionario de una lección.
+#[derive(Debug, Clone)]
+pub struct QuizResult {
+    pub correct: i32,
+    pub total: i32,
+    pub status: LessonStatus,
+    pub answers: Vec<AnswerResult>,
+}
+
+impl QuizResult {
+    pub fn perfect(&self) -> bool {
+        self.total > 0 && self.correct == self.total
+    }
+}
+
 /// Ejercicio sin solución: la UI nunca recibe el código de referencia.
 #[derive(Debug, Clone)]
 pub struct Exercise {

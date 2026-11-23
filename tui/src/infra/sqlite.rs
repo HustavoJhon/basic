@@ -7,7 +7,7 @@ use rusqlite::{Connection, OpenFlags};
 use crate::error::BasicError;
 
 /// Última versión de esquema que entiende este binario.
-pub const LATEST_SCHEMA_VERSION: u32 = 2;
+pub const LATEST_SCHEMA_VERSION: u32 = 3;
 
 /// Tablas que deben existir tras aplicar todas las migraciones.
 ///
@@ -31,6 +31,7 @@ pub const EXPECTED_TABLES: &[&str] = &[
     "code_lab_languages",
     "code_lab_paths",
     "code_lab_lessons",
+    "code_lab_quiz_questions",
     "code_lab_exercises",
     "code_lab_lesson_progress",
     "code_lab_exercise_progress",
@@ -65,6 +66,14 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "code_lab",
         sql: include_str!("../../migrations/0002_code_lab.sql"),
         down_sql: Some(include_str!("../../migrations/0002_code_lab.down.sql")),
+    },
+    Migration {
+        version: 3,
+        name: "code_lab_quizzes",
+        sql: include_str!("../../migrations/0003_code_lab_quizzes.sql"),
+        down_sql: Some(include_str!(
+            "../../migrations/0003_code_lab_quizzes.down.sql"
+        )),
     },
 ];
 
@@ -306,7 +315,7 @@ mod tests {
         }
 
         let database = Database::open(&path).unwrap();
-        assert_eq!(database.schema_version().unwrap(), 2);
+        assert_eq!(database.schema_version().unwrap(), LATEST_SCHEMA_VERSION);
         for table in EXPECTED_TABLES {
             assert!(database.has_table(table).unwrap(), "falta {table}");
         }

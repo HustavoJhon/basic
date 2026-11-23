@@ -45,6 +45,9 @@ pub enum BasicError {
     #[error("no se pudo serializar la configuración: {0}")]
     SerializeConfig(#[from] toml::ser::Error),
 
+    #[error("no se pudo procesar JSON: {0}")]
+    Json(#[from] serde_json::Error),
+
     #[error(
         "la base de datos usa el esquema v{found}, pero esta versión de basic solo entiende hasta v{supported}"
     )]
