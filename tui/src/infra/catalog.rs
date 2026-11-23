@@ -526,7 +526,6 @@ pub fn finish_pomodoro(
         [session_id],
     )?;
 
-    eprintln!("finish: session={session_id} actual={actual_seconds} status={status} phase={phase}");
     if status == "completed" && phase == "focus" {
         let day = today();
         upsert_activity(

@@ -181,9 +181,6 @@ impl App {
         };
         let elapsed = (catalog::unix_now() - started_at).max(0);
         let remaining = (planned - elapsed).max(0);
-        eprintln!(
-            "recover: session={session_id} phase={phase} cycle={cycle} elapsed={elapsed} planned={planned} remaining={remaining}"
-        );
         let Some(phase) = phase_from_str(&phase) else {
             catalog::finish_pomodoro(
                 &self.database,
