@@ -3,10 +3,14 @@
 //! La UI es un adaptador: aquí viven las acciones y la persistencia, sin
 //! depender de Ratatui ni de Crossterm.
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 
+use crate::code_lab::app::CodeLabService;
+use crate::code_lab::domain::{AttemptSummary, Difficulty, Exercise, ExerciseProgress};
+use crate::code_lab::runners::{self, RunOutcome, RunRequest};
 use crate::config::Config;
 use crate::domain::{ActivityDay, DashboardStats, Document, LearnMode, LearningStatus};
 use crate::error::BasicError;
@@ -24,6 +28,8 @@ pub enum Screen {
     Review,
     Pomodoro,
     Stats,
+    CodeLab,
+    Exercise,
 }
 
 impl Screen {
@@ -36,6 +42,8 @@ impl Screen {
             Self::Review => "repaso",
             Self::Pomodoro => "pomodoro",
             Self::Stats => "estadísticas",
+            Self::CodeLab => "code lab",
+            Self::Exercise => "ejercicio",
         }
     }
 }
@@ -70,6 +78,28 @@ pub struct ReaderState {
     pub document: Document,
     pub body: String,
     pub scroll: u16,
+}
+
+/// Espacio de trabajo de un ejercicio de Code Lab.
+#[derive(Debug)]
+pub struct ExerciseWorkspace {
+    pub exercise: Exercise,
+    pub progress: ExerciseProgress,
+    /// Código actual del borrador. La UI lo actualiza antes de guardar o ejecutar.
+    pub code: String,
+    pub result: Option<RunOutcome>,
+    pub solution: Option<String>,
+    pub status: String,
+}
+
+/// Estado de la práctica. El editor vive en la UI; aquí solo está su texto.
+#[derive(Debug, Default)]
+pub struct CodeLabState {
+    pub exercises: Vec<Exercise>,
+    pub progress: HashMap<i64, ExerciseProgress>,
+    pub selected: usize,
+    pub workspace: Option<ExerciseWorkspace>,
+    pub pending_run: bool,
 }
 
 #[derive(Debug)]
@@ -133,6 +163,7 @@ pub struct App {
     pub recent: Vec<Document>,
     pub review_queue: Vec<Document>,
     pub review_index: usize,
+    pub code_lab: CodeLabState,
     pub prompt: Option<Prompt>,
     pub help_visible: bool,
     pub status: String,
@@ -160,6 +191,7 @@ impl App {
             recent: Vec::new(),
             review_queue: Vec::new(),
             review_index: 0,
+            code_lab: CodeLabState::default(),
             prompt: None,
             help_visible: false,
             status: "Listo. Pulsa ? para ver los atajos.".to_string(),
@@ -258,7 +290,7 @@ impl App {
             }
             Screen::Dashboard => self.recent.clone(),
             Screen::Pomodoro | Screen::Stats => catalog::list_documents(&self.database, Some(20))?,
-            Screen::Reader => Vec::new(),
+            Screen::Reader | Screen::CodeLab | Screen::Exercise => Vec::new(),
         };
 
         if self.documents.is_empty() {
@@ -285,7 +317,11 @@ impl App {
         self.screen = screen;
         self.search_mode = false;
         self.selected = 0;
-        self.refresh()
+        self.refresh()?;
+        if screen == Screen::CodeLab {
+            self.refresh_code_lab()?;
+        }
+        Ok(())
     }
 
     pub fn back(&mut self) -> Result<(), BasicError> {
@@ -461,6 +497,185 @@ impl App {
             self.status.push_str(" · cola completada");
         }
         self.stats = catalog::dashboard_stats(&self.database)?;
+        Ok(())
+    }
+
+    /// Prepara la pantalla de práctica. F17 muestra los ejercicios fáciles;
+    /// las dificultades restantes se añadirán en fases posteriores.
+    fn refresh_code_lab(&mut self) -> Result<(), BasicError> {
+        let mut service = CodeLabService::new(&mut self.database);
+        service.seed()?;
+        self.code_lab.exercises = service
+            .exercises()?
+            .into_iter()
+            .filter(|exercise| exercise.difficulty == Difficulty::Easy)
+            .collect();
+        let mut progress = HashMap::new();
+        for exercise in &self.code_lab.exercises {
+            progress.insert(exercise.id, service.exercise_progress(exercise.id)?);
+        }
+        self.code_lab.progress = progress;
+        if self.code_lab.exercises.is_empty() {
+            self.code_lab.selected = 0;
+        } else {
+            self.code_lab.selected = self
+                .code_lab
+                .selected
+                .min(self.code_lab.exercises.len() - 1);
+        }
+        Ok(())
+    }
+
+    pub fn open_code_lab_screen(&mut self) -> Result<(), BasicError> {
+        self.set_screen(Screen::CodeLab)
+    }
+
+    pub fn move_exercise_selection(&mut self, delta: isize) {
+        if self.code_lab.exercises.is_empty() {
+            return;
+        }
+        let len = self.code_lab.exercises.len() as isize;
+        self.code_lab.selected = (self.code_lab.selected as isize + delta).rem_euclid(len) as usize;
+    }
+
+    pub fn open_selected_exercise(&mut self) -> Result<(), BasicError> {
+        let Some(exercise) = self.code_lab.exercises.get(self.code_lab.selected).cloned() else {
+            self.status = "No hay ejercicios disponibles.".to_string();
+            return Ok(());
+        };
+        self.open_exercise(exercise.id)
+    }
+
+    pub fn open_exercise(&mut self, exercise_id: i64) -> Result<(), BasicError> {
+        let (exercise, progress, code) = {
+            let mut service = CodeLabService::new(&mut self.database);
+            let Some(exercise) = service.exercise_detail(exercise_id)? else {
+                self.status = "El ejercicio ya no existe.".to_string();
+                return Ok(());
+            };
+            let progress = service.open_exercise(exercise_id)?;
+            let code = service
+                .draft(exercise_id)?
+                .unwrap_or_else(|| exercise.starter_code.clone());
+            (exercise, progress, code)
+        };
+        let title = exercise.title.clone();
+        self.code_lab.workspace = Some(ExerciseWorkspace {
+            exercise,
+            progress,
+            code,
+            result: None,
+            solution: None,
+            status: "Listo. Ctrl+Enter ejecuta, Ctrl+S guarda el borrador.".to_string(),
+        });
+        if self.screen != Screen::Exercise {
+            self.previous.push(self.screen);
+        }
+        self.screen = Screen::Exercise;
+        self.status = format!("Ejercicio abierto: {title}");
+        Ok(())
+    }
+
+    /// Guarda el código que hay ahora mismo en el editor.
+    pub fn save_exercise_code(&mut self, code: &str) -> Result<(), BasicError> {
+        let Some(workspace) = &mut self.code_lab.workspace else {
+            return Ok(());
+        };
+        let id = workspace.exercise.id;
+        CodeLabService::new(&mut self.database).save_draft(id, code)?;
+        workspace.code = code.to_string();
+        workspace.status = "Borrador guardado.".to_string();
+        self.status = "Borrador guardado.".to_string();
+        Ok(())
+    }
+
+    /// Marca la ejecución para que el bucle dibuje el estado «ejecutando»
+    /// antes de bloquear la terminal con el SDK.
+    pub fn request_exercise_run(&mut self, code: &str) {
+        let Some(workspace) = &mut self.code_lab.workspace else {
+            return;
+        };
+        workspace.code = code.to_string();
+        self.code_lab.pending_run = true;
+        self.status = "Ejecutando ejercicio…".to_string();
+    }
+
+    pub fn run_pending(&mut self) -> Result<(), BasicError> {
+        if !self.code_lab.pending_run {
+            return Ok(());
+        }
+        self.code_lab.pending_run = false;
+        self.run_exercise()
+    }
+
+    fn run_exercise(&mut self) -> Result<(), BasicError> {
+        let Some(workspace) = &self.code_lab.workspace else {
+            return Ok(());
+        };
+        let exercise = workspace.exercise.clone();
+        let code = workspace.code.clone();
+        let runner =
+            runners::runner_for(&exercise.language).ok_or_else(|| BasicError::InvalidConfig {
+                path: "code_lab/runners".into(),
+                message: format!("lenguaje no soportado: {}", exercise.language),
+            })?;
+        let request = RunRequest {
+            exercise_id: exercise.id,
+            language: exercise.language.clone(),
+            code: code.clone(),
+            test_spec: exercise.test_spec.clone(),
+            timeout_secs: exercise.test_spec.timeout_secs,
+            vault: self.config.vault.clone(),
+        };
+        let outcome = runner.run(&request)?;
+        self.apply_outcome(exercise.id, &code, outcome)
+    }
+
+    pub(crate) fn apply_outcome(
+        &mut self,
+        exercise_id: i64,
+        code: &str,
+        outcome: RunOutcome,
+    ) -> Result<(), BasicError> {
+        let summary = AttemptSummary::from(&outcome);
+        let passed = outcome.passed();
+        {
+            let mut service = CodeLabService::new(&mut self.database);
+            service.save_draft(exercise_id, code)?;
+            service.record_attempt(exercise_id, code, &summary)?;
+        }
+        if let Some(workspace) = &mut self.code_lab.workspace {
+            workspace.code = code.to_string();
+            workspace.result = Some(outcome);
+            workspace.status = if passed {
+                "Todos los casos superados.".to_string()
+            } else {
+                "Revisa los casos fallidos.".to_string()
+            };
+            workspace.progress =
+                CodeLabService::new(&mut self.database).exercise_progress(exercise_id)?;
+        }
+        self.refresh_code_lab()?;
+        self.status = if passed {
+            "Ejercicio superado.".to_string()
+        } else {
+            "Intento registrado; revisa los casos.".to_string()
+        };
+        Ok(())
+    }
+
+    /// Muestra u oculta la solución de referencia solo bajo petición.
+    pub fn toggle_solution(&mut self) -> Result<(), BasicError> {
+        let Some(workspace) = &mut self.code_lab.workspace else {
+            return Ok(());
+        };
+        if workspace.solution.is_some() {
+            workspace.solution = None;
+            return Ok(());
+        }
+        let id = workspace.exercise.id;
+        let solution = CodeLabService::new(&mut self.database).solution(id)?;
+        workspace.solution = solution;
         Ok(())
     }
 
@@ -740,5 +955,86 @@ mod tests {
     fn clock_is_zero_padded() {
         assert_eq!(format_clock(0), "00:00");
         assert_eq!(format_clock(65), "01:05");
+    }
+
+    #[test]
+    fn code_lab_lists_easy_exercises_and_opens_without_an_attempt() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        app.open_code_lab_screen().unwrap();
+        assert_eq!(app.code_lab.exercises.len(), 3);
+        assert!(
+            app.code_lab
+                .exercises
+                .iter()
+                .all(|exercise| exercise.difficulty == Difficulty::Easy)
+        );
+
+        app.open_selected_exercise().unwrap();
+        assert_eq!(app.screen, Screen::Exercise);
+        let workspace = app.code_lab.workspace.as_ref().unwrap();
+        assert_eq!(workspace.progress.attempts, 0);
+        assert!(workspace.code.contains("TODO"));
+        assert!(workspace.result.is_none());
+    }
+
+    #[test]
+    #[ignore = "requiere el SDK de .NET instalado"]
+    fn real_sdk_solves_the_first_easy_exercise() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        app.open_code_lab_screen().unwrap();
+        app.open_selected_exercise().unwrap();
+        let id = app.code_lab.workspace.as_ref().unwrap().exercise.id;
+        let solution = CodeLabService::new(&mut app.database)
+            .solution(id)
+            .unwrap()
+            .unwrap();
+        app.save_exercise_code(&solution).unwrap();
+        app.request_exercise_run(&solution);
+        app.run_pending().unwrap();
+
+        let workspace = app.code_lab.workspace.as_ref().unwrap();
+        assert!(
+            workspace.result.as_ref().unwrap().passed(),
+            "{:?}",
+            workspace.status
+        );
+        assert_eq!(workspace.progress.best_tests_passed, 4);
+    }
+
+    #[test]
+    fn applying_an_outcome_records_attempt_and_draft() {
+        use crate::code_lab::domain::AttemptStatus;
+
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        app.open_code_lab_screen().unwrap();
+        let id = app.code_lab.exercises[0].id;
+        app.open_exercise(id).unwrap();
+
+        let outcome = RunOutcome {
+            status: AttemptStatus::Passed,
+            sdk_version: Some("10.0.400".to_string()),
+            compile_ok: Some(true),
+            tests_passed: 4,
+            tests_total: 4,
+            duration_ms: 500,
+            executions: Vec::new(),
+            cases: Vec::new(),
+        };
+        app.apply_outcome(id, "solución propia", outcome).unwrap();
+        let workspace = app.code_lab.workspace.as_ref().unwrap();
+        assert!(workspace.result.as_ref().unwrap().passed());
+        assert_eq!(workspace.progress.attempts, 1);
+        assert_eq!(workspace.progress.best_tests_passed, 4);
+        assert_eq!(workspace.code, "solución propia");
+        assert_eq!(
+            CodeLabService::new(&mut app.database)
+                .draft(id)
+                .unwrap()
+                .as_deref(),
+            Some("solución propia")
+        );
     }
 }

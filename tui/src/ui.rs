@@ -11,7 +11,7 @@ use anyhow::Context;
 use chrono::{Datelike, Duration as ChronoDuration, NaiveDate};
 use ratatui::backend::CrosstermBackend;
 use ratatui::crossterm::cursor::{Hide, Show};
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
@@ -22,7 +22,9 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::{Frame, Terminal};
 
-use crate::app::{App, Screen, format_clock};
+use crate::app::{App, ExerciseWorkspace, Screen, format_clock};
+use crate::code_lab::domain::ExerciseStatus;
+use crate::code_lab::ui::editor::CodeEditor;
 use crate::config::Config;
 use crate::domain::{
     Document, LearnMode, LearningStatus, ReviewRating, activity_level, format_duration,
@@ -85,6 +87,33 @@ impl Theme {
     }
 }
 
+/// Estado visual que no pertenece a la lógica de la aplicación.
+#[derive(Default)]
+struct UiState {
+    editor: Option<CodeEditor>,
+    editor_exercise_id: Option<i64>,
+}
+
+impl UiState {
+    fn sync_editor(&mut self, app: &App, theme: Theme) {
+        match &app.code_lab.workspace {
+            Some(workspace) if self.editor_exercise_id != Some(workspace.exercise.id) => {
+                self.editor = Some(CodeEditor::new(
+                    &workspace.exercise.language,
+                    &workspace.code,
+                    theme,
+                ));
+                self.editor_exercise_id = Some(workspace.exercise.id);
+            }
+            None => {
+                self.editor = None;
+                self.editor_exercise_id = None;
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Arranca la TUI hasta que el usuario sale.
 pub fn run(config: Config, database: Database) -> anyhow::Result<()> {
     let mut app = App::new(config, database).context("no se pudo inicializar la aplicación")?;
@@ -93,7 +122,8 @@ pub fn run(config: Config, database: Database) -> anyhow::Result<()> {
         let backend = CrosstermBackend::new(io::stdout());
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
-        run_loop(&mut terminal, &mut app)
+        let mut ui = UiState::default();
+        run_loop(&mut terminal, &mut app, &mut ui)
     })();
     let restore = restore_terminal();
     restore?;
@@ -115,6 +145,7 @@ fn restore_terminal() -> anyhow::Result<()> {
 fn run_loop(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     app: &mut App,
+    ui: &mut UiState,
 ) -> anyhow::Result<()> {
     loop {
         if let Err(error) = app.tick() {
@@ -125,12 +156,21 @@ fn run_loop(
             open_editor(terminal, app)?;
         }
 
-        terminal.draw(|frame| draw(frame, app))?;
+        ui.sync_editor(app, Theme::gruvbox_dark());
+        terminal.draw(|frame| draw(frame, app, ui))?;
+
+        // El runner es síncrono: dibujamos primero el estado «ejecutando» y
+        // solo después bloqueamos la terminal con el SDK del lenguaje.
+        if app.code_lab.pending_run
+            && let Err(error) = app.run_pending()
+        {
+            app.status = format!("Ejecución: {error}");
+        }
 
         if event::poll(Duration::from_millis(250))? {
             match event::read()? {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    handle_key(app, key)?;
+                    handle_key(app, ui, key)?;
                 }
                 Event::Resize(_, _) => {}
                 _ => {}
@@ -166,7 +206,7 @@ fn open_editor(
     Ok(())
 }
 
-fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
+fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<()> {
     if app.help_visible {
         if matches!(key.code, KeyCode::Esc | KeyCode::Char('?')) {
             app.help_visible = false;
@@ -180,6 +220,48 @@ fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
 
     if app.search_mode {
         return handle_search(app, key);
+    }
+
+    if app.screen == Screen::Exercise {
+        if app.code_lab.workspace.is_none() {
+            app.back()?;
+            return Ok(());
+        }
+        if let Some(editor) = ui.editor.as_mut()
+            && editor.handle_key(key)
+        {
+            return Ok(());
+        }
+        match key.code {
+            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let code = ui.editor.as_ref().map(CodeEditor::code).unwrap_or_default();
+                app.save_exercise_code(&code)?;
+                if let Some(editor) = ui.editor.as_mut() {
+                    editor.mark_saved();
+                }
+            }
+            KeyCode::Enter if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let code = ui.editor.as_ref().map(CodeEditor::code).unwrap_or_default();
+                app.request_exercise_run(&code);
+                if let Some(editor) = ui.editor.as_mut() {
+                    editor.mark_saved();
+                }
+            }
+            KeyCode::Char('v') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.toggle_solution()?;
+                let solution = app
+                    .code_lab
+                    .workspace
+                    .as_ref()
+                    .and_then(|workspace| workspace.solution.clone());
+                if let (Some(editor), Some(solution)) = (ui.editor.as_mut(), solution) {
+                    editor.set_code(&solution);
+                }
+            }
+            KeyCode::Esc => app.back()?,
+            _ => {}
+        }
+        return Ok(());
     }
 
     // Los dígitos son contextuales en Learn y Review.
@@ -208,6 +290,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
         KeyCode::Char('4') => app.set_screen(Screen::Review)?,
         KeyCode::Char('5') => app.set_screen(Screen::Pomodoro)?,
         KeyCode::Char('6') => app.set_screen(Screen::Stats)?,
+        KeyCode::Char('7') => app.open_code_lab_screen()?,
         KeyCode::Tab => {
             let next = match app.screen {
                 Screen::Dashboard => Screen::Explore,
@@ -215,14 +298,21 @@ fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
                 Screen::Learn => Screen::Review,
                 Screen::Review => Screen::Pomodoro,
                 Screen::Pomodoro => Screen::Stats,
-                Screen::Stats => Screen::Dashboard,
-                Screen::Reader => Screen::Dashboard,
+                Screen::Stats => Screen::CodeLab,
+                Screen::CodeLab => Screen::Dashboard,
+                Screen::Reader | Screen::Exercise => Screen::Dashboard,
             };
-            app.set_screen(next)?;
+            if next == Screen::CodeLab {
+                app.open_code_lab_screen()?;
+            } else {
+                app.set_screen(next)?;
+            }
         }
         KeyCode::Char('j') | KeyCode::Down => {
             if app.screen == Screen::Reader {
                 app.reader_scroll(1);
+            } else if app.screen == Screen::CodeLab {
+                app.move_exercise_selection(1);
             } else {
                 app.move_selection(1);
             }
@@ -230,6 +320,8 @@ fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
         KeyCode::Char('k') | KeyCode::Up => {
             if app.screen == Screen::Reader {
                 app.reader_scroll(-1);
+            } else if app.screen == Screen::CodeLab {
+                app.move_exercise_selection(-1);
             } else {
                 app.move_selection(-1);
             }
@@ -239,6 +331,8 @@ fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
         KeyCode::Char('g') => {
             if app.screen == Screen::Reader {
                 app.reader_scroll(-10_000);
+            } else if app.screen == Screen::CodeLab {
+                app.code_lab.selected = 0;
             } else {
                 app.selected = 0;
             }
@@ -246,6 +340,10 @@ fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
         KeyCode::Char('G') => {
             if app.screen == Screen::Reader {
                 app.reader_scroll(10_000);
+            } else if app.screen == Screen::CodeLab {
+                if !app.code_lab.exercises.is_empty() {
+                    app.code_lab.selected = app.code_lab.exercises.len() - 1;
+                }
             } else if !app.documents.is_empty() {
                 app.selected = app.documents.len() - 1;
             }
@@ -267,7 +365,9 @@ fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
             }
         }
         KeyCode::Enter => {
-            if matches!(
+            if app.screen == Screen::CodeLab {
+                app.open_selected_exercise()?;
+            } else if matches!(
                 app.screen,
                 Screen::Explore | Screen::Learn | Screen::Dashboard
             ) {
@@ -321,7 +421,7 @@ fn handle_prompt(app: &mut App, key: KeyEvent) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn draw(frame: &mut Frame, app: &App) {
+fn draw(frame: &mut Frame, app: &App, ui: &UiState) {
     let theme = Theme::gruvbox_dark();
     let area = frame.area();
     frame.render_widget(Block::default().style(theme.base()), area);
@@ -355,6 +455,8 @@ fn draw(frame: &mut Frame, app: &App) {
         Screen::Review => draw_review(frame, layout[1], app, &theme),
         Screen::Pomodoro => draw_pomodoro(frame, layout[1], app, &theme),
         Screen::Stats => draw_stats(frame, layout[1], app, &theme),
+        Screen::CodeLab => draw_code_lab(frame, layout[1], app, &theme),
+        Screen::Exercise => draw_exercise(frame, layout[1], app, ui, &theme),
     }
     draw_footer(frame, layout[2], app, &theme);
 
@@ -374,6 +476,7 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         ("4", "repaso", Screen::Review),
         ("5", "pomodoro", Screen::Pomodoro),
         ("6", "stats", Screen::Stats),
+        ("7", "code lab", Screen::CodeLab),
     ];
     let mut tabs = vec![Span::styled(
         " BASIC ",
@@ -430,15 +533,17 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
 fn draw_footer(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
     let hints = match app.screen {
         Screen::Dashboard | Screen::Explore => {
-            "j/k mover · Enter abrir · / buscar · n nueva · i indexar · 1-6 pantallas · q salir"
+            "j/k mover · Enter abrir · / buscar · n nueva · i indexar · 1-7 pantallas · q salir"
         }
         Screen::Reader => {
             "j/k desplazar · s estado · f favorito · e editar · p pomodoro · Esc volver · q salir"
         }
         Screen::Learn => "1-5 modo · j/k mover · Enter abrir · / buscar · i indexar · Esc volver",
         Screen::Review => "1-4 calificar · j/k mover · Enter abrir · Esc volver",
-        Screen::Pomodoro => "Espacio iniciar/pausar · x reiniciar · > saltar · 1-6 pantallas",
-        Screen::Stats => "j/k mover · i indexar · 1-6 pantallas · q salir",
+        Screen::Pomodoro => "Espacio iniciar/pausar · x reiniciar · > saltar · 1-7 pantallas",
+        Screen::Stats => "j/k mover · i indexar · 1-7 pantallas · q salir",
+        Screen::CodeLab => "j/k elegir · Enter abrir · Esc volver · 1-7 pantallas · q salir",
+        Screen::Exercise => "Ctrl+S guardar · Ctrl+Enter ejecutar · Ctrl+V solución · Esc volver",
     };
     frame.render_widget(
         Paragraph::new(Line::from(vec![
@@ -908,6 +1013,306 @@ fn heat_color(seconds: i64, theme: &Theme) -> Color {
     }
 }
 
+fn draw_code_lab(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(4)])
+        .split(area);
+
+    let solved = app
+        .code_lab
+        .progress
+        .values()
+        .filter(|progress| progress.status == ExerciseStatus::Solved)
+        .count();
+    frame.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled("  Fácil", Style::default().fg(theme.accent)),
+            Span::styled(
+                format!(
+                    " · {} ejercicios · {solved} resueltos · Enter abre el ejercicio",
+                    app.code_lab.exercises.len()
+                ),
+                Style::default().fg(theme.muted),
+            ),
+        ]))
+        .style(theme.base())
+        .block(theme.block("code lab")),
+        rows[0],
+    );
+
+    if app.code_lab.exercises.is_empty() {
+        frame.render_widget(
+            Paragraph::new("No hay ejercicios. Ejecuta `basic code-lab seed`.")
+                .alignment(Alignment::Center)
+                .style(theme.base())
+                .block(theme.block("ejercicios")),
+            rows[1],
+        );
+        return;
+    }
+
+    let items = app
+        .code_lab
+        .exercises
+        .iter()
+        .map(|exercise| {
+            let progress = app
+                .code_lab
+                .progress
+                .get(&exercise.id)
+                .map(|progress| progress.status)
+                .unwrap_or(ExerciseStatus::NotStarted);
+            let color = match progress {
+                ExerciseStatus::Solved => theme.success,
+                ExerciseStatus::Attempted | ExerciseStatus::NeedsReview => theme.warning,
+                ExerciseStatus::NotStarted => theme.muted,
+            };
+            Line::from(vec![
+                Span::styled(
+                    format!(" {:<3}", exercise.level),
+                    Style::default().fg(theme.muted),
+                ),
+                Span::styled(
+                    truncate(&exercise.title, 34),
+                    Style::default().fg(theme.text),
+                ),
+                Span::styled(
+                    format!(" · {}", truncate(&exercise.topic, 20)),
+                    Style::default().fg(theme.muted),
+                ),
+                Span::styled(
+                    format!("  {}", progress.label()),
+                    Style::default().fg(color),
+                ),
+            ])
+        })
+        .map(ListItem::new)
+        .collect::<Vec<_>>();
+    let list = List::new(items)
+        .block(theme.block("ejercicios fáciles"))
+        .highlight_style(
+            Style::default()
+                .bg(theme.selection)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("▌ ");
+    let mut state = ListState::default();
+    state.select(Some(app.code_lab.selected));
+    frame.render_stateful_widget(list, rows[1], &mut state);
+}
+
+fn draw_exercise(frame: &mut Frame, area: Rect, app: &App, ui: &UiState, theme: &Theme) {
+    let Some(workspace) = &app.code_lab.workspace else {
+        frame.render_widget(
+            Paragraph::new("No hay un ejercicio abierto. Pulsa Esc para volver.")
+                .alignment(Alignment::Center)
+                .style(theme.base())
+                .block(theme.block("ejercicio")),
+            area,
+        );
+        return;
+    };
+
+    if area.width >= 100 {
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(38), Constraint::Percentage(62)])
+            .split(area);
+        draw_exercise_detail(frame, columns[0], workspace, theme);
+        draw_editor_panel(frame, columns[1], workspace, ui, theme);
+    } else {
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(8), Constraint::Min(5)])
+            .split(area);
+        draw_exercise_detail(frame, rows[0], workspace, theme);
+        draw_editor_panel(frame, rows[1], workspace, ui, theme);
+    }
+}
+
+fn draw_exercise_detail(
+    frame: &mut Frame,
+    area: Rect,
+    workspace: &ExerciseWorkspace,
+    theme: &Theme,
+) {
+    let exercise = &workspace.exercise;
+    let status_color = match workspace.progress.status {
+        ExerciseStatus::Solved => theme.success,
+        ExerciseStatus::Attempted | ExerciseStatus::NeedsReview => theme.warning,
+        ExerciseStatus::NotStarted => theme.muted,
+    };
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled(
+                truncate(&exercise.title, 30),
+                Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" · {}", exercise.difficulty.label()),
+                Style::default().fg(theme.accent),
+            ),
+        ]),
+        Line::from(Span::styled(
+            truncate(&exercise.description_md, 60),
+            Style::default().fg(theme.muted),
+        )),
+    ];
+
+    for example in exercise.examples.iter().take(2) {
+        lines.push(Line::from(vec![
+            Span::styled("  → ", Style::default().fg(theme.link)),
+            Span::styled(
+                truncate(&format!("{} ⇒ {}", example.input, example.output), 58),
+                Style::default().fg(theme.text),
+            ),
+        ]));
+    }
+    lines.push(Line::from(vec![
+        Span::styled("  casos: ", Style::default().fg(theme.muted)),
+        Span::styled(
+            format!(
+                "{} visibles · {} ocultos",
+                exercise.visible_cases().count(),
+                exercise.hidden_case_count()
+            ),
+            Style::default().fg(theme.muted),
+        ),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  estado: ", Style::default().fg(theme.muted)),
+        Span::styled(
+            workspace.progress.status.label(),
+            Style::default().fg(status_color),
+        ),
+        Span::styled(
+            format!(
+                " · {} intento(s) · {:.0}%",
+                workspace.progress.attempts,
+                workspace.progress.best_score * 100.0
+            ),
+            Style::default().fg(theme.muted),
+        ),
+    ]));
+    lines.extend(result_lines(workspace, theme));
+    lines.push(Line::from(Span::styled(
+        truncate(&workspace.status, 60),
+        Style::default().fg(theme.warning),
+    )));
+
+    frame.render_widget(
+        Paragraph::new(lines)
+            .wrap(Wrap { trim: false })
+            .style(theme.panel())
+            .block(theme.block("enunciado")),
+        area,
+    );
+}
+
+fn result_lines(workspace: &ExerciseWorkspace, theme: &Theme) -> Vec<Line<'static>> {
+    let Some(result) = &workspace.result else {
+        return Vec::new();
+    };
+    let mut lines = vec![Line::from(vec![
+        Span::styled("  resultado: ", Style::default().fg(theme.muted)),
+        Span::styled(
+            format!(
+                "{} · {}/{} · {} ms",
+                result.status.label(),
+                result.tests_passed,
+                result.tests_total,
+                result.duration_ms
+            ),
+            Style::default().fg(if result.passed() {
+                theme.success
+            } else {
+                theme.error
+            }),
+        ),
+    ])];
+    for case in result.cases.iter().filter(|case| case.visible).take(4) {
+        let color = if case.passed {
+            theme.success
+        } else {
+            theme.error
+        };
+        lines.push(Line::from(vec![
+            Span::styled(
+                if case.passed { "  ✓ " } else { "  ✗ " },
+                Style::default().fg(color),
+            ),
+            Span::styled(
+                truncate(
+                    &format!(
+                        "{} · esperado «{}» · real «{}»",
+                        case.name, case.expected, case.actual
+                    ),
+                    58,
+                ),
+                Style::default().fg(theme.text),
+            ),
+        ]));
+    }
+    let hidden = result.cases.iter().filter(|case| !case.visible).count();
+    if hidden > 0 {
+        let passed = result
+            .cases
+            .iter()
+            .filter(|case| !case.visible && case.passed)
+            .count();
+        lines.push(Line::from(Span::styled(
+            format!("  ocultos: {passed}/{hidden} superados"),
+            Style::default().fg(theme.muted),
+        )));
+    }
+    if let Some(error) = result.first_error() {
+        lines.push(Line::from(Span::styled(
+            truncate(error, 58),
+            Style::default().fg(theme.error),
+        )));
+    }
+    lines
+}
+
+fn draw_editor_panel(
+    frame: &mut Frame,
+    area: Rect,
+    workspace: &ExerciseWorkspace,
+    ui: &UiState,
+    theme: &Theme,
+) {
+    if area.height == 0 {
+        return;
+    }
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .split(area);
+    if let Some(editor) = &ui.editor {
+        editor.render(frame, rows[0]);
+    } else {
+        frame.render_widget(
+            Paragraph::new("Preparando editor…")
+                .alignment(Alignment::Center)
+                .style(theme.base()),
+            rows[0],
+        );
+    }
+    let hint = if workspace.solution.is_some() {
+        "Solución visible · Ctrl+V para ocultarla · no cuenta como intento"
+    } else {
+        "Ctrl+S guardar · Ctrl+Enter ejecutar · Ctrl+V solución · Esc volver"
+    };
+    frame.render_widget(
+        Paragraph::new(Span::styled(
+            truncate(hint, 78),
+            Style::default().fg(theme.muted),
+        )),
+        rows[1],
+    );
+}
+
 fn document_list(frame: &mut Frame, area: Rect, app: &App, title: &str, theme: &Theme) {
     if app.documents.is_empty() {
         frame.render_widget(
@@ -1074,7 +1479,7 @@ fn draw_prompt(frame: &mut Frame, area: Rect, prompt: &crate::app::Prompt, theme
 }
 
 fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
-    let popup = centered_rect(area.width.saturating_sub(16).min(90), 22, area);
+    let popup = centered_rect(area.width.saturating_sub(16).min(90), 27, area);
     frame.render_widget(Clear, popup);
     let lines = vec![
         Line::from(Span::styled(
@@ -1083,7 +1488,7 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("  1-6        cambiar de pantalla"),
+        Line::from("  1-7        cambiar de pantalla"),
         Line::from("  Tab        siguiente pantalla"),
         Line::from("  j/k        mover o desplazar"),
         Line::from("  Enter      abrir documento"),
@@ -1104,6 +1509,18 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
         Line::from("  e          abrir en el editor externo"),
         Line::from("  p          pomodoro"),
         Line::from("  1-4        calificar repaso"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "code lab",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  7          abrir ejercicios fáciles"),
+        Line::from("  Enter      abrir ejercicio seleccionado"),
+        Line::from("  Ctrl+S     guardar borrador"),
+        Line::from("  Ctrl+Enter ejecutar casos de prueba"),
+        Line::from("  Ctrl+V     mostrar u ocultar solución"),
         Line::from(""),
         Line::from(Span::styled(
             "  ? o Esc para cerrar la ayuda",
@@ -1133,4 +1550,138 @@ fn truncate(value: &str, max: usize) -> String {
     let mut result: String = value.chars().take(max.saturating_sub(1)).collect();
     result.push('…');
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui::backend::TestBackend;
+    use tempfile::TempDir;
+
+    use super::*;
+    use crate::code_lab::domain::AttemptStatus;
+    use crate::code_lab::runners::CaseResult;
+    use crate::infra::sqlite::Database;
+    use crate::paths::Paths;
+
+    fn fixture() -> (TempDir, App) {
+        let temp = TempDir::new().unwrap();
+        let paths = Paths::from_dirs(
+            temp.path(),
+            &temp.path().join("config"),
+            &temp.path().join("data"),
+            &temp.path().join("state"),
+            |_| None,
+        );
+        let mut config = Config::default_for(&paths);
+        config.vault = temp.path().join("vault");
+        std::fs::create_dir_all(&config.vault).unwrap();
+        let app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        (temp, app)
+    }
+
+    fn render(width: u16, height: u16, app: &App, ui: &UiState) -> String {
+        let backend = TestBackend::new(width, height);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|frame| draw(frame, app, ui)).unwrap();
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect()
+    }
+
+    fn key(code: KeyCode, modifiers: KeyModifiers) -> KeyEvent {
+        KeyEvent {
+            code,
+            modifiers,
+            kind: KeyEventKind::Press,
+            state: ratatui::crossterm::event::KeyEventState::empty(),
+        }
+    }
+
+    #[test]
+    fn code_lab_screen_lists_easy_exercises() {
+        let (_temp, mut app) = fixture();
+        app.open_code_lab_screen().unwrap();
+        let ui = UiState::default();
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("code lab"));
+        assert!(rendered.contains("ejercicios fáciles"));
+        assert!(rendered.contains("Suma de dos números"));
+    }
+
+    #[test]
+    fn exercise_screen_shows_statement_and_editor() {
+        let (_temp, mut app) = fixture();
+        app.open_code_lab_screen().unwrap();
+        app.open_selected_exercise().unwrap();
+        let mut ui = UiState::default();
+        ui.sync_editor(&app, Theme::gruvbox_dark());
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("enunciado"));
+        assert!(rendered.contains("Código"));
+        assert!(rendered.contains("Ctrl+Enter"));
+    }
+
+    #[test]
+    fn hidden_case_output_is_never_rendered() {
+        let (_temp, mut app) = fixture();
+        app.open_code_lab_screen().unwrap();
+        app.open_selected_exercise().unwrap();
+        let id = app.code_lab.workspace.as_ref().unwrap().exercise.id;
+        let outcome = crate::code_lab::runners::RunOutcome {
+            status: AttemptStatus::Failed,
+            sdk_version: Some("10.0.400".to_string()),
+            compile_ok: Some(true),
+            tests_passed: 1,
+            tests_total: 2,
+            duration_ms: 900,
+            executions: Vec::new(),
+            cases: vec![CaseResult {
+                name: "oculto".to_string(),
+                passed: false,
+                visible: false,
+                expected: "SECRETO_OCULTO".to_string(),
+                actual: "otro".to_string(),
+                duration_ms: 10,
+            }],
+        };
+        app.apply_outcome(id, "código", outcome).unwrap();
+        let mut ui = UiState::default();
+        ui.sync_editor(&app, Theme::gruvbox_dark());
+        let rendered = render(110, 32, &app, &ui);
+        assert!(!rendered.contains("SECRETO_OCULTO"));
+        assert!(rendered.contains("ocultos: 0/1"));
+    }
+
+    #[test]
+    fn editor_typing_and_save_are_wired_to_the_draft() {
+        let (_temp, mut app) = fixture();
+        app.open_code_lab_screen().unwrap();
+        app.open_selected_exercise().unwrap();
+        let mut ui = UiState::default();
+        ui.sync_editor(&app, Theme::gruvbox_dark());
+        let id = app.code_lab.workspace.as_ref().unwrap().exercise.id;
+
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('x'), KeyModifiers::empty()),
+        )
+        .unwrap();
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('s'), KeyModifiers::CONTROL),
+        )
+        .unwrap();
+        let draft = crate::code_lab::app::CodeLabService::new(&mut app.database)
+            .draft(id)
+            .unwrap()
+            .unwrap();
+        assert!(draft.starts_with('x'));
+        assert!(!ui.editor.as_ref().unwrap().dirty());
+    }
 }
