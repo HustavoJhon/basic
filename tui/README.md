@@ -2,11 +2,12 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
-> Estado: **F2–F16 implementadas**. Incluye TUI Gruvbox, indexado incremental,
+> Estado: **F2–F17 implementadas**. Incluye TUI Gruvbox, indexado incremental,
 > explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
 > Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Code Lab añade el
-> esquema v3, el dominio del lenguaje, el editor TUI reutilizable, el runner
-> síncrono de C# y el catálogo de lecciones con cuestionarios. Markdown es la
+> esquema v4, el dominio del lenguaje, el editor TUI reutilizable, el runner
+> síncrono de C#, el catálogo de lecciones con cuestionarios y la práctica de
+> ejercicios fáciles con borradores e intentos persistentes. Markdown es la
 > fuente de verdad; SQLite es índice y estado complementario. Las notas
 > existentes nunca se reescriben automáticamente.
 
@@ -75,7 +76,7 @@ coincidencia difusa y ordena por relevancia.
 
 | Tecla | Acción |
 |---|---|
-| `1`–`6` | inicio, explorar, aprender, repaso, pomodoro, estadísticas |
+| `1`–`7` | inicio, explorar, aprender, repaso, pomodoro, estadísticas, code lab |
 | `Tab` | siguiente pantalla |
 | `j`/`k` | mover selección o desplazar el lector |
 | `Enter` | abrir el documento seleccionado |
@@ -90,6 +91,10 @@ coincidencia difusa y ordena por relevancia.
 | `x` / `>` | reiniciar / saltar fase |
 | `1`–`4` | calificar un repaso (otra vez, difícil, bien, fácil) |
 | `1`–`5` | elegir modo en Learning Mode |
+| `Enter` (Code Lab) | abrir el ejercicio seleccionado |
+| `Ctrl+S` | guardar el borrador del ejercicio |
+| `Ctrl+Enter` | ejecutar los casos de prueba del ejercicio |
+| `Ctrl+V` | mostrar u ocultar la solución de referencia |
 | `?` | ayuda contextual |
 | `q` / `Esc` | salir / volver |
 
@@ -105,6 +110,18 @@ a escribir si la ruta ya existe. La ruta debe ser relativa al vault y no puede
 salir de él (`..`, rutas absolutas). Para editar se abre el editor externo
 configurado (`editor`); al volver, la nota se recarga y se reindexa la siguiente
 vez que se solicite.
+
+### Práctica en Code Lab
+
+Pulsa `7` para abrir los ejercicios fáciles de C#. `Enter` abre el seleccionado
+con el editor integrado: `Ctrl+S` guarda el borrador y `Ctrl+Enter` compila y
+ejecuta todos los casos con el SDK local. El enunciado muestra los ejemplos
+visibles y cuántos casos ocultos existen; la salida de los casos ocultos nunca
+se dibuja. `Ctrl+V` revela la solución de referencia solo cuando lo pides.
+
+Abrir un ejercicio no cuenta como intento. Cada ejecución registra un intento,
+sus trazas por fase y el mejor resultado; el tiempo de Code Lab se acumula por
+separado del Pomodoro.
 
 ### Códigos de salida
 
