@@ -471,6 +471,61 @@ fn code_lab_seed_and_lessons_workflow() {
     assert!(notes.status.success(), "stderr: {}", stderr(&notes));
     let links = json(&notes);
     assert!(links.as_array().unwrap().is_empty());
+
+    let export = run({
+        let mut command = basic(temp.path());
+        command.args(["code-lab", "export", "--format", "markdown"]);
+        command
+    });
+    assert!(export.status.success(), "stderr: {}", stderr(&export));
+    let text = stdout(&export);
+    assert!(text.contains("# Progreso de Code Lab"));
+    assert!(text.contains("lecciones: 0/1"));
+
+    let export_json = run({
+        let mut command = basic(temp.path());
+        command.args(["code-lab", "export", "--format", "json"]);
+        command
+    });
+    assert!(
+        export_json.status.success(),
+        "stderr: {}",
+        stderr(&export_json)
+    );
+    let report = json(&export_json);
+    assert_eq!(report["stats"]["lessons"], 5);
+    assert_eq!(report["daily"]["lessons"]["target"], 1);
+
+    let output = temp.path().join("reporte.md");
+    let export_file = run({
+        let mut command = basic(temp.path());
+        command.args(["code-lab", "export", "--output", output.to_str().unwrap()]);
+        command
+    });
+    assert!(
+        export_file.status.success(),
+        "stderr: {}",
+        stderr(&export_file)
+    );
+    assert!(
+        fs::read_to_string(&output)
+            .unwrap()
+            .contains("Progreso de Code Lab")
+    );
+
+    let forbidden = temp.path().join("vault/reporte.md");
+    let refused = run({
+        let mut command = basic(temp.path());
+        command.args([
+            "code-lab",
+            "export",
+            "--output",
+            forbidden.to_str().unwrap(),
+        ]);
+        command
+    });
+    assert!(!refused.status.success());
+    assert!(!forbidden.exists());
 }
 
 #[test]

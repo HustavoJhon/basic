@@ -10,11 +10,12 @@ use clap::{CommandFactory, Parser};
 use serde::Serialize;
 
 use basic::cli::{
-    Cli, CodeLabCommand, CodeLabLessonsArgs, CodeLabNotesArgs, CodeLabSeedArgs, CodeLabStatsArgs,
-    Command, ConfigCommand, ConfigInitArgs, ConfigShowArgs, DoctorArgs, IndexArgs, NewNoteArgs,
-    PathsArgs, ReviewArgs, SearchArgs, StatsArgs,
+    Cli, CodeLabCommand, CodeLabExportArgs, CodeLabLessonsArgs, CodeLabNotesArgs, CodeLabSeedArgs,
+    CodeLabStatsArgs, Command, ConfigCommand, ConfigInitArgs, ConfigShowArgs, DoctorArgs,
+    ExportFormat, IndexArgs, NewNoteArgs, PathsArgs, ReviewArgs, SearchArgs, StatsArgs,
 };
 use basic::code_lab::app::CodeLabService;
+use basic::code_lab::domain::ProgressReport;
 use basic::config::{Config, LoadedConfig};
 use basic::domain::{ActivityDay, DashboardStats, SearchScope};
 use basic::infra::catalog;
@@ -68,6 +69,7 @@ fn run() -> anyhow::Result<u8> {
             CodeLabCommand::Lessons(args) => run_code_lab_lessons(&paths, args),
             CodeLabCommand::Stats(args) => run_code_lab_stats(&paths, args),
             CodeLabCommand::Notes(args) => run_code_lab_notes(&paths, args),
+            CodeLabCommand::Export(args) => run_code_lab_export(&paths, args),
         },
         None => {
             // En una terminal interactiva el comando principal es la TUI; en
@@ -367,6 +369,100 @@ fn run_code_lab_notes(paths: &Paths, args: CodeLabNotesArgs) -> anyhow::Result<u
         println!("\n{} nota(s) enlazada(s).", links.len());
     }
     Ok(0)
+}
+
+fn run_code_lab_export(paths: &Paths, args: CodeLabExportArgs) -> anyhow::Result<u8> {
+    let loaded = load_valid(paths)?;
+    let mut database = Database::open(&loaded.config.database)
+        .with_context(|| format!("no se pudo abrir {}", loaded.config.database.display()))?;
+    let mut service = CodeLabService::new(&mut database);
+    service.seed()?;
+    let report = service.report(
+        loaded.config.code_lab.daily_lessons,
+        loaded.config.code_lab.daily_exercises,
+    )?;
+
+    let rendered = match args.format {
+        ExportFormat::Json => serde_json::to_string_pretty(&report)?,
+        ExportFormat::Markdown => render_progress_markdown(&report),
+    };
+
+    if let Some(path) = &args.output {
+        let absolute = if path.is_absolute() {
+            path.clone()
+        } else {
+            std::env::current_dir()?.join(path)
+        };
+        if absolute.starts_with(&loaded.config.vault) {
+            bail!("el informe no puede escribirse dentro del vault");
+        }
+        if let Some(parent) = absolute.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&absolute, rendered.as_bytes())?;
+        println!("Informe escrito en {}", absolute.display());
+    } else {
+        print!("{rendered}");
+    }
+    Ok(0)
+}
+
+fn render_progress_markdown(report: &ProgressReport) -> String {
+    let stats = &report.stats;
+    let daily = &report.daily;
+    let generated = chrono::DateTime::from_timestamp(report.generated_at, 0)
+        .map(|date| date.format("%Y-%m-%d %H:%M UTC").to_string())
+        .unwrap_or_else(|| "fecha desconocida".to_string());
+    let mut lines = vec![
+        "# Progreso de Code Lab".to_string(),
+        String::new(),
+        format!("_Generado: {generated} · día {}_\n", daily.day),
+        format!(
+            "- Lecciones completadas: {}/{}",
+            stats.lessons_completed, stats.lessons
+        ),
+        format!(
+            "- Ejercicios resueltos: {}/{}",
+            stats.exercises_solved, stats.exercises
+        ),
+        format!(
+            "- Intentos superados: {}/{}",
+            stats.attempts_passed, stats.attempts
+        ),
+        format!("- Conceptos pendientes: {}", stats.concepts_due),
+        format!(
+            "- Tiempo en Code Lab: {}",
+            basic::domain::format_duration(stats.seconds_spent)
+        ),
+        String::new(),
+        "## Objetivos de hoy".to_string(),
+        String::new(),
+        format!(
+            "- lecciones: {}/{}",
+            daily.lessons.done, daily.lessons.target
+        ),
+        format!(
+            "- ejercicios: {}/{}",
+            daily.exercises.done, daily.exercises.target
+        ),
+        String::new(),
+        "## Notas enlazadas".to_string(),
+        String::new(),
+    ];
+    if report.note_links.is_empty() {
+        lines.push("_(ninguna)_".to_string());
+    } else {
+        for link in &report.note_links {
+            lines.push(format!(
+                "- {} {} · {}",
+                link.item_type.label(),
+                link.item_id,
+                link.note_path
+            ));
+        }
+    }
+    lines.push(String::new());
+    lines.join("\n")
 }
 
 fn run_doctor(paths: &Paths, args: DoctorArgs) -> anyhow::Result<u8> {

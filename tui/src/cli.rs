@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::domain::SearchScope;
@@ -56,6 +58,8 @@ pub enum CodeLabCommand {
     Stats(CodeLabStatsArgs),
     /// Lista las notas Markdown enlazadas con lecciones, ejercicios y conceptos
     Notes(CodeLabNotesArgs),
+    /// Exporta el progreso sin servicios externos
+    Export(CodeLabExportArgs),
 }
 
 #[derive(Debug, Args)]
@@ -84,6 +88,23 @@ pub struct CodeLabNotesArgs {
     /// Emite los enlaces como JSON
     #[arg(long)]
     pub json: bool,
+}
+
+/// Formato del informe exportado.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum ExportFormat {
+    Markdown,
+    Json,
+}
+
+#[derive(Debug, Args)]
+pub struct CodeLabExportArgs {
+    /// Formato de salida
+    #[arg(long, value_enum, default_value = "markdown")]
+    pub format: ExportFormat,
+    /// Escribe el informe en un archivo en vez de la salida estándar
+    #[arg(long)]
+    pub output: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]
