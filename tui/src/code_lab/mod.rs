@@ -5,4 +5,5 @@
 //! catálogo, editor, runners y UI sin acoplarlos entre sí.
 
 pub mod domain;
+pub mod runners;
 pub mod ui;

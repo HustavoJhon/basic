@@ -19,6 +19,7 @@ rusqlite = { version = "0.42", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+tempfile = "3"
 thiserror = "2"
 toml = "1"
 tui-textarea = "0.7"
@@ -26,9 +27,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 unicode-width = "0.2"
 walkdir = "2"
-
-[dev-dependencies]
-tempfile = "3"
 
 [profile.release]
 lto = "thin"

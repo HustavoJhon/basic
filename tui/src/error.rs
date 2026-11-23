@@ -66,6 +66,19 @@ pub enum BasicError {
     #[error(transparent)]
     Database(#[from] rusqlite::Error),
 
+    #[error("no se pudo iniciar `{command}`: {source}")]
+    ProcessSpawn {
+        command: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("el proceso `{command}` agotó el tiempo de espera de {seconds}s")]
+    ProcessTimeout { command: String, seconds: u64 },
+
+    #[error("espacio de trabajo inseguro: {path}")]
+    UnsafeWorkspace { path: PathBuf },
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
