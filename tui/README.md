@@ -2,7 +2,7 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
-> Estado: **F2–F21 implementadas**. Incluye TUI Gruvbox, indexado incremental,
+> Estado: **F2–F22 implementadas**. Incluye TUI Gruvbox, indexado incremental,
 > explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
 > Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Code Lab añade el
 > esquema v5, el dominio del lenguaje, el editor TUI reutilizable, el runner
@@ -56,6 +56,9 @@ basic code-lab stats           # progreso agregado de lecciones y ejercicios
 basic code-lab stats --json
 basic code-lab notes           # notas Markdown enlazadas con Code Lab
 basic code-lab notes --json
+basic code-lab export          # informe legible de progreso
+basic code-lab export --format json
+basic code-lab export --output ~/progreso.md
 
 basic doctor                  # diagnóstico legible
 basic doctor --json           # informe estructurado
@@ -148,8 +151,19 @@ de repaso no se añade al Pomodoro.
 
 La pantalla de estadísticas muestra, junto al heatmap, las lecciones
 completadas, los ejercicios resueltos, los intentos superados, los conceptos
-pendientes y el tiempo acumulado en Code Lab. `basic code-lab stats` ofrece el
-mismo resumen para scripts.
+pendientes, el tiempo acumulado en Code Lab y los objetivos del día. Los
+objetivos se configuran en `config.toml`:
+
+```toml
+[code_lab]
+daily_lessons = 1
+daily_exercises = 2
+```
+
+`basic code-lab stats` ofrece el resumen para scripts y `basic code-lab export`
+genera un informe Markdown o JSON con stats, objetivos y notas enlazadas. El
+informe puede escribirse a un archivo con `--output`; se rechaza cualquier ruta
+dentro del vault para no crear notas accidentalmente.
 
 ### Notas de Code Lab en el vault
 
