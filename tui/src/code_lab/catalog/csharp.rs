@@ -456,14 +456,14 @@ const TESTS_INVERTIR: &[TestCaseSeed] = &[
     TestCaseSeed {
         name: "espacios",
         input: "dos palabras\n",
-        expected_output: "sarabpalpod\n",
+        expected_output: "sarbalap sod\n",
         visible: false,
     },
 ];
 
 const EXAMPLES_FRECUENCIAS: &[ExampleSeed] = &[ExampleSeed {
     input: "uno dos uno",
-    output: "dos: 1\none: 2",
+    output: "dos: 1\nuno: 2",
     explanation: "Se ordenan las palabras y se cuenta cada una.",
 }];
 
@@ -471,7 +471,7 @@ const TESTS_FRECUENCIAS: &[TestCaseSeed] = &[
     TestCaseSeed {
         name: "ejemplo",
         input: "uno dos uno\n",
-        expected_output: "dos: 1\none: 2\n",
+        expected_output: "dos: 1\nuno: 2\n",
         visible: true,
     },
     TestCaseSeed {

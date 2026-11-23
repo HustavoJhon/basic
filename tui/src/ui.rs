@@ -23,7 +23,7 @@ use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, 
 use ratatui::{Frame, Terminal};
 
 use crate::app::{App, ExerciseWorkspace, Screen, format_clock};
-use crate::code_lab::domain::ExerciseStatus;
+use crate::code_lab::domain::{Difficulty, ExerciseStatus};
 use crate::code_lab::ui::editor::CodeEditor;
 use crate::config::Config;
 use crate::domain::{
@@ -264,7 +264,14 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
         return Ok(());
     }
 
-    // Los dígitos son contextuales en Learn y Review.
+    // Los dígitos son contextuales en Learn, Review y Code Lab.
+    if app.screen == Screen::CodeLab
+        && let KeyCode::Char(character @ '1'..='3') = key.code
+    {
+        let difficulty = Difficulty::ALL[character as usize - '1' as usize];
+        app.set_difficulty(difficulty)?;
+        return Ok(());
+    }
     if app.screen == Screen::Learn
         && let KeyCode::Char(character @ '1'..='5') = key.code
     {
@@ -542,7 +549,7 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         Screen::Review => "1-4 calificar · j/k mover · Enter abrir · Esc volver",
         Screen::Pomodoro => "Espacio iniciar/pausar · x reiniciar · > saltar · 1-7 pantallas",
         Screen::Stats => "j/k mover · i indexar · 1-7 pantallas · q salir",
-        Screen::CodeLab => "j/k elegir · Enter abrir · Esc volver · 1-7 pantallas · q salir",
+        Screen::CodeLab => "1-3 dificultad · j/k elegir · Enter abrir · Esc volver · q salir",
         Screen::Exercise => "Ctrl+S guardar · Ctrl+Enter ejecutar · Ctrl+V solución · Esc volver",
     };
     frame.render_widget(
@@ -1019,25 +1026,43 @@ fn draw_code_lab(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         .constraints([Constraint::Length(3), Constraint::Min(4)])
         .split(area);
 
+    let mut tabs = Vec::new();
+    for (index, difficulty) in Difficulty::ALL.iter().enumerate() {
+        let style = if *difficulty == app.code_lab.difficulty {
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(theme.muted)
+        };
+        tabs.push(Span::styled(
+            format!("[{}] {} ", index + 1, difficulty.label()),
+            style,
+        ));
+    }
     let solved = app
         .code_lab
-        .progress
-        .values()
-        .filter(|progress| progress.status == ExerciseStatus::Solved)
+        .exercises
+        .iter()
+        .filter(|exercise| {
+            app.code_lab
+                .progress
+                .get(&exercise.id)
+                .is_some_and(|progress| progress.status == ExerciseStatus::Solved)
+        })
         .count();
+    tabs.push(Span::styled(
+        format!(
+            "· {}/{} resueltos · Enter abre",
+            solved,
+            app.code_lab.exercises.len()
+        ),
+        Style::default().fg(theme.muted),
+    ));
     frame.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::styled("  Fácil", Style::default().fg(theme.accent)),
-            Span::styled(
-                format!(
-                    " · {} ejercicios · {solved} resueltos · Enter abre el ejercicio",
-                    app.code_lab.exercises.len()
-                ),
-                Style::default().fg(theme.muted),
-            ),
-        ]))
-        .style(theme.base())
-        .block(theme.block("code lab")),
+        Paragraph::new(Line::from(tabs))
+            .style(theme.base())
+            .block(theme.block("code lab")),
         rows[0],
     );
 
@@ -1090,7 +1115,7 @@ fn draw_code_lab(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         .map(ListItem::new)
         .collect::<Vec<_>>();
     let list = List::new(items)
-        .block(theme.block("ejercicios fáciles"))
+        .block(theme.block("ejercicios"))
         .highlight_style(
             Style::default()
                 .bg(theme.selection)
@@ -1479,7 +1504,7 @@ fn draw_prompt(frame: &mut Frame, area: Rect, prompt: &crate::app::Prompt, theme
 }
 
 fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
-    let popup = centered_rect(area.width.saturating_sub(16).min(90), 27, area);
+    let popup = centered_rect(area.width.saturating_sub(16).min(90), 28, area);
     frame.render_widget(Clear, popup);
     let lines = vec![
         Line::from(Span::styled(
@@ -1516,7 +1541,8 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("  7          abrir ejercicios fáciles"),
+        Line::from("  7          abrir Code Lab"),
+        Line::from("  1-3        elegir dificultad en Code Lab"),
         Line::from("  Enter      abrir ejercicio seleccionado"),
         Line::from("  Ctrl+S     guardar borrador"),
         Line::from("  Ctrl+Enter ejecutar casos de prueba"),
@@ -1608,8 +1634,35 @@ mod tests {
         let ui = UiState::default();
         let rendered = render(110, 32, &app, &ui);
         assert!(rendered.contains("code lab"));
-        assert!(rendered.contains("ejercicios fáciles"));
+        assert!(rendered.contains("ejercicios"));
         assert!(rendered.contains("Suma de dos números"));
+    }
+
+    #[test]
+    fn difficulty_keys_switch_the_exercise_list() {
+        let (_temp, mut app) = fixture();
+        app.open_code_lab_screen().unwrap();
+        let mut ui = UiState::default();
+
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('2'), KeyModifiers::empty()),
+        )
+        .unwrap();
+        assert_eq!(app.code_lab.difficulty, Difficulty::Medium);
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("medio"));
+        assert!(rendered.contains("Máximo de tres números"));
+
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('3'), KeyModifiers::empty()),
+        )
+        .unwrap();
+        assert_eq!(app.code_lab.difficulty, Difficulty::Hard);
+        assert_eq!(app.code_lab.exercises.len(), 1);
     }
 
     #[test]

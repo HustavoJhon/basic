@@ -93,13 +93,27 @@ pub struct ExerciseWorkspace {
 }
 
 /// Estado de la práctica. El editor vive en la UI; aquí solo está su texto.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CodeLabState {
     pub exercises: Vec<Exercise>,
     pub progress: HashMap<i64, ExerciseProgress>,
+    pub difficulty: Difficulty,
     pub selected: usize,
     pub workspace: Option<ExerciseWorkspace>,
     pub pending_run: bool,
+}
+
+impl Default for CodeLabState {
+    fn default() -> Self {
+        Self {
+            exercises: Vec::new(),
+            progress: HashMap::new(),
+            difficulty: Difficulty::Easy,
+            selected: 0,
+            workspace: None,
+            pending_run: false,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -500,20 +514,19 @@ impl App {
         Ok(())
     }
 
-    /// Prepara la pantalla de práctica. F17 muestra los ejercicios fáciles;
-    /// las dificultades restantes se añadirán en fases posteriores.
-    fn refresh_code_lab(&mut self) -> Result<(), BasicError> {
+    /// Recarga el catálogo y el progreso de todas las dificultades.
+    pub fn refresh_code_lab(&mut self) -> Result<(), BasicError> {
         let mut service = CodeLabService::new(&mut self.database);
         service.seed()?;
-        self.code_lab.exercises = service
-            .exercises()?
-            .into_iter()
-            .filter(|exercise| exercise.difficulty == Difficulty::Easy)
-            .collect();
+        let all = service.exercises()?;
         let mut progress = HashMap::new();
-        for exercise in &self.code_lab.exercises {
+        for exercise in &all {
             progress.insert(exercise.id, service.exercise_progress(exercise.id)?);
         }
+        self.code_lab.exercises = all
+            .into_iter()
+            .filter(|exercise| exercise.difficulty == self.code_lab.difficulty)
+            .collect();
         self.code_lab.progress = progress;
         if self.code_lab.exercises.is_empty() {
             self.code_lab.selected = 0;
@@ -528,6 +541,17 @@ impl App {
 
     pub fn open_code_lab_screen(&mut self) -> Result<(), BasicError> {
         self.set_screen(Screen::CodeLab)
+    }
+
+    pub fn set_difficulty(&mut self, difficulty: Difficulty) -> Result<(), BasicError> {
+        if self.code_lab.difficulty == difficulty {
+            return Ok(());
+        }
+        self.code_lab.difficulty = difficulty;
+        self.code_lab.selected = 0;
+        self.refresh_code_lab()?;
+        self.status = format!("Dificultad: {}.", difficulty.label());
+        Ok(())
     }
 
     pub fn move_exercise_selection(&mut self, delta: isize) {
@@ -979,6 +1003,28 @@ mod tests {
     }
 
     #[test]
+    fn code_lab_filters_all_difficulties() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        app.open_code_lab_screen().unwrap();
+        assert_eq!(app.code_lab.exercises.len(), 3);
+
+        app.set_difficulty(Difficulty::Medium).unwrap();
+        assert_eq!(app.code_lab.exercises.len(), 2);
+        assert!(
+            app.code_lab
+                .exercises
+                .iter()
+                .all(|exercise| exercise.difficulty == Difficulty::Medium)
+        );
+
+        app.set_difficulty(Difficulty::Hard).unwrap();
+        assert_eq!(app.code_lab.exercises.len(), 1);
+        assert_eq!(app.code_lab.exercises[0].slug, "frecuencias-palabras");
+        assert_eq!(app.code_lab.progress.len(), 6);
+    }
+
+    #[test]
     #[ignore = "requiere el SDK de .NET instalado"]
     fn real_sdk_solves_the_first_easy_exercise() {
         let (_temp, config) = fixture();
@@ -1001,6 +1047,49 @@ mod tests {
             workspace.status
         );
         assert_eq!(workspace.progress.best_tests_passed, 4);
+    }
+
+    #[test]
+    #[ignore = "requiere el SDK de .NET instalado"]
+    fn real_sdk_solves_every_catalogued_exercise() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        app.open_code_lab_screen().unwrap();
+
+        for difficulty in Difficulty::ALL {
+            app.set_difficulty(difficulty).unwrap();
+            let ids: Vec<i64> = app
+                .code_lab
+                .exercises
+                .iter()
+                .map(|exercise| exercise.id)
+                .collect();
+            for id in ids {
+                app.open_exercise(id).unwrap();
+                let slug = app
+                    .code_lab
+                    .workspace
+                    .as_ref()
+                    .unwrap()
+                    .exercise
+                    .slug
+                    .clone();
+                let solution = CodeLabService::new(&mut app.database)
+                    .solution(id)
+                    .unwrap()
+                    .unwrap();
+                app.save_exercise_code(&solution).unwrap();
+                app.request_exercise_run(&solution);
+                app.run_pending().unwrap();
+                let workspace = app.code_lab.workspace.as_ref().unwrap();
+                assert!(
+                    workspace.result.as_ref().unwrap().passed(),
+                    "{slug}: {:?}",
+                    workspace.result.as_ref().unwrap().cases
+                );
+            }
+        }
+        assert_eq!(app.code_lab.progress.len(), 6);
     }
 
     #[test]
