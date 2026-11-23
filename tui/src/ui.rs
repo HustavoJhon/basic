@@ -445,6 +445,7 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
         KeyCode::Char('s') if app.screen == Screen::Reader => app.cycle_reader_status()?,
         KeyCode::Char('f') if app.screen == Screen::Reader => app.toggle_favorite()?,
         KeyCode::Char('e') if app.screen == Screen::Reader => app.request_editor(),
+        KeyCode::Char('c') if app.screen == Screen::Reader => app.open_note_source()?,
         KeyCode::Char('p') => {
             app.set_screen(Screen::Pomodoro)?;
             if !app.pomodoro.running {
@@ -606,7 +607,15 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
             "j/k mover · Enter abrir · / buscar · n nueva · i indexar · 1-8 pantallas · q salir"
         }
         Screen::Reader => {
-            "j/k desplazar · s estado · f favorito · e editar · p pomodoro · Esc volver · q salir"
+            if app
+                .reader
+                .as_ref()
+                .is_some_and(|reader| reader.source.is_some())
+            {
+                "j/k desplazar · c origen · s estado · f favorito · e editar · Esc volver"
+            } else {
+                "j/k desplazar · s estado · f favorito · e editar · p pomodoro · Esc volver · q salir"
+            }
         }
         Screen::Learn => "1-6 modo · j/k mover · Enter abrir · / buscar · i indexar · Esc volver",
         Screen::Review => "1-4 calificar · j/k mover · Enter abrir · Esc volver",
@@ -1879,12 +1888,21 @@ fn draw_reader(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         );
         return;
     };
-    let lines = markdown::render(&reader.body, theme);
-    let title = format!(
+    let visible_body = reader
+        .body
+        .lines()
+        .filter(|line| !line.contains("basic-code-lab"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let lines = markdown::render(&visible_body, theme);
+    let mut title = format!(
         "{} · {}",
         reader.document.title,
         reader.document.status.label()
     );
+    if reader.source.is_some() {
+        title.push_str(" · c: origen");
+    }
     frame.render_widget(
         Paragraph::new(Text::from(lines))
             .wrap(Wrap { trim: false })
@@ -1913,7 +1931,7 @@ fn draw_prompt(frame: &mut Frame, area: Rect, prompt: &crate::app::Prompt, theme
 }
 
 fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
-    let popup = centered_rect(area.width.saturating_sub(16).min(90), 35, area);
+    let popup = centered_rect(area.width.saturating_sub(16).min(90), 36, area);
     frame.render_widget(Clear, popup);
     let lines = vec![
         Line::from(Span::styled(
@@ -1941,6 +1959,7 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
         Line::from("  s          cambiar estado de aprendizaje"),
         Line::from("  f          favorito"),
         Line::from("  e          abrir en el editor externo"),
+        Line::from("  c          volver al origen de Code Lab"),
         Line::from("  p          pomodoro"),
         Line::from("  1-6        modos de Learning Mode"),
         Line::from("  1-4        calificar repaso"),
@@ -2230,6 +2249,32 @@ mod tests {
         )
         .unwrap();
         assert!(app.prompt.is_some());
+    }
+
+    #[test]
+    fn reader_hides_the_backlink_and_navigates_with_c() {
+        let (_temp, mut app) = fixture();
+        app.refresh_code_lab().unwrap();
+        let lesson_id = crate::code_lab::app::CodeLabService::new(&mut app.database)
+            .lessons()
+            .unwrap()[0]
+            .id;
+        app.start_code_lab_note_prompt(NoteItemType::Lesson, lesson_id)
+            .unwrap();
+        app.prompt_submit().unwrap();
+
+        let mut ui = UiState::default();
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("c: origen"));
+        assert!(!rendered.contains("basic-code-lab"));
+
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('c'), KeyModifiers::empty()),
+        )
+        .unwrap();
+        assert_eq!(app.screen, Screen::Lesson);
     }
 
     #[test]

@@ -11,7 +11,8 @@ use std::time::Instant;
 use crate::code_lab::app::{CodeLabService, LessonView};
 use crate::code_lab::domain::{
     AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, DEFAULT_LANGUAGE, Difficulty,
-    Exercise, ExerciseProgress, ItemType, NoteItemType, NoteLink, QuizResult,
+    Exercise, ExerciseProgress, ItemType, NoteBacklink, NoteItemType, NoteLink, QuizResult,
+    note_template,
 };
 use crate::code_lab::runners::{self, RunOutcome, RunRequest};
 use crate::config::Config;
@@ -87,6 +88,8 @@ pub struct ReaderState {
     pub document: Document,
     pub body: String,
     pub scroll: u16,
+    /// Elemento de Code Lab del que procede la nota, si la nota lo declara.
+    pub source: Option<NoteBacklink>,
 }
 
 /// Espacio de trabajo de un ejercicio de Code Lab.
@@ -443,10 +446,12 @@ impl App {
             }
         };
         self.status = format!("Abierto: {}", document.title);
+        let source = NoteBacklink::parse(&body);
         self.reader = Some(ReaderState {
             document,
             body,
             scroll: 0,
+            source,
         });
         self.screen = Screen::Reader;
         self.stats = catalog::dashboard_stats(&self.database)?;
@@ -460,12 +465,48 @@ impl App {
         let path = self.config.vault.join(&reader.document.path);
         match fs::read_to_string(&path) {
             Ok(body) => {
+                reader.source = NoteBacklink::parse(&body);
                 reader.body = body;
                 self.status = "Nota recargada.".to_string();
             }
             Err(error) => self.status = format!("No se pudo recargar: {error}"),
         }
         Ok(())
+    }
+
+    /// Vuelve a la lección, ejercicio o concepto que originó la nota abierta.
+    pub fn open_note_source(&mut self) -> Result<(), BasicError> {
+        let Some(source) = self
+            .reader
+            .as_ref()
+            .and_then(|reader| reader.source.clone())
+        else {
+            self.status = "Esta nota no tiene un origen de Code Lab.".to_string();
+            return Ok(());
+        };
+        match source.item_type {
+            NoteItemType::Lesson => self.open_lesson(source.item_id),
+            NoteItemType::Exercise => self.open_exercise(source.item_id),
+            NoteItemType::Concept => {
+                self.refresh_code_lab()?;
+                self.open_concept_review_screen()?;
+                if let Some(index) = self
+                    .code_lab
+                    .concepts
+                    .iter()
+                    .position(|concept| concept.id == source.item_id)
+                {
+                    self.code_lab.concept_index = index;
+                    self.status = format!(
+                        "Concepto abierto: {}",
+                        self.code_lab.concepts[index].concept
+                    );
+                } else {
+                    self.status = "El concepto no está pendiente de repaso.".to_string();
+                }
+                Ok(())
+            }
+        }
     }
 
     pub fn reader_scroll(&mut self, delta: i32) {
@@ -983,6 +1024,13 @@ impl App {
         item_id: i64,
     ) -> Result<CodeLabNoteDraft, BasicError> {
         let service = CodeLabService::new(&mut self.database);
+        let template = note_template(DEFAULT_LANGUAGE);
+        let marker = NoteBacklink {
+            language: DEFAULT_LANGUAGE.to_string(),
+            item_type,
+            item_id,
+        }
+        .marker();
         let (title, body, default_path) = match item_type {
             NoteItemType::Lesson => {
                 let view = service
@@ -990,10 +1038,11 @@ impl App {
                     .ok_or_else(|| note_target_error("lección", item_id))?;
                 let lesson = &view.detail.lesson;
                 let body = format!(
-                    "> Lección de {} · {}\n\n{}\n\n## Conceptos\n\n{}\n\n## Contenido de la lección\n\n{}\n",
-                    DEFAULT_LANGUAGE,
+                    "{marker}\n\n> Lección de {} · {}\n\n{}\n\n## {}\n\n{}\n\n## Contenido de la lección\n\n{}\n",
+                    template.language,
                     lesson.display(),
                     lesson.summary,
+                    template.concepts_heading,
                     bullet_list(&lesson.concepts),
                     lesson.content_md
                 );
@@ -1008,13 +1057,16 @@ impl App {
                     .exercise_detail(item_id)?
                     .ok_or_else(|| note_target_error("ejercicio", item_id))?;
                 let body = format!(
-                    "> Ejercicio de {} · nivel {}\n\n{}\n\n## Conceptos\n\n{}\n\n## Pistas\n\n{}\n\n## Código inicial\n\n```csharp\n{}\n```\n",
-                    DEFAULT_LANGUAGE,
+                    "{marker}\n\n> Ejercicio de {} · nivel {}\n\n{}\n\n## {}\n\n{}\n\n## Pistas\n\n{}\n\n## Código inicial\n\n```{}\n{}\n```\n\n## {}\n\nEscribe aquí tus pruebas y resultados.\n",
+                    template.language,
                     exercise.level,
                     exercise.description_md,
+                    template.concepts_heading,
                     bullet_list(&exercise.concepts),
                     bullet_list(&exercise.hints),
-                    exercise.starter_code
+                    template.code_fence,
+                    exercise.starter_code,
+                    template.practice_heading
                 );
                 (
                     exercise.title.clone(),
@@ -1030,8 +1082,12 @@ impl App {
                     .concept(item_id)?
                     .ok_or_else(|| note_target_error("concepto", item_id))?;
                 let body = format!(
-                    "> Concepto de {} · nivel {} · repasado {} vez/veces\n\nEste concepto aparece en lecciones y ejercicios. Añade aquí tus propias notas y ejemplos.\n",
-                    concept.language, concept.level, concept.lapses
+                    "{marker}\n\n> Concepto de {} · nivel {} · repasado {} vez/veces\n\nEste concepto aparece en lecciones y ejercicios. Añade aquí tus propias notas y ejemplos.\n\n## {}\n\n```{}\n// Tu ejemplo aquí\n```\n",
+                    concept.language,
+                    concept.level,
+                    concept.lapses,
+                    template.practice_heading,
+                    template.code_fence
                 );
                 (
                     concept.concept.clone(),
@@ -1634,6 +1690,30 @@ mod tests {
             .unwrap();
         assert!(app.prompt.is_none());
         assert_eq!(app.screen, Screen::Reader);
+    }
+
+    #[test]
+    fn reader_can_return_to_the_note_source() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        let lesson_id = {
+            let mut service = CodeLabService::new(&mut app.database);
+            service.seed().unwrap();
+            service.lessons().unwrap()[0].id
+        };
+        app.start_code_lab_note_prompt(NoteItemType::Lesson, lesson_id)
+            .unwrap();
+        app.prompt_submit().unwrap();
+
+        let source = app.reader.as_ref().unwrap().source.clone().unwrap();
+        assert_eq!(source.item_type, NoteItemType::Lesson);
+        assert_eq!(source.item_id, lesson_id);
+        app.open_note_source().unwrap();
+        assert_eq!(app.screen, Screen::Lesson);
+        assert_eq!(
+            app.code_lab.lesson.as_ref().unwrap().view.detail.lesson.id,
+            lesson_id
+        );
     }
 
     #[test]
