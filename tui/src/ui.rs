@@ -964,16 +964,20 @@ fn draw_pomodoro(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
 }
 
 fn draw_stats(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
-    let (heatmap_area, summary_area, lab_area) = if area.width >= 100 {
+    let (heatmap_area, summary_area, lab_area, daily_area) = if area.width >= 100 {
         let columns = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(68), Constraint::Percentage(32)])
             .split(area);
         let left = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(8), Constraint::Length(8)])
+            .constraints([
+                Constraint::Min(8),
+                Constraint::Length(8),
+                Constraint::Length(8),
+            ])
             .split(columns[0]);
-        (left[0], columns[1], left[1])
+        (left[0], columns[1], left[1], left[2])
     } else {
         let rows = Layout::default()
             .direction(Direction::Vertical)
@@ -981,13 +985,15 @@ fn draw_stats(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
                 Constraint::Min(8),
                 Constraint::Length(10),
                 Constraint::Length(8),
+                Constraint::Length(8),
             ])
             .split(area);
-        (rows[0], rows[1], rows[2])
+        (rows[0], rows[1], rows[2], rows[3])
     };
 
     draw_heatmap(frame, heatmap_area, app, theme);
     draw_code_lab_stats(frame, lab_area, app, theme);
+    draw_daily_goals(frame, daily_area, app, theme);
 
     let lines = vec![
         Line::from(vec![
@@ -1095,6 +1101,41 @@ fn draw_code_lab_stats(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) 
         Paragraph::new(lines)
             .style(theme.base())
             .block(theme.block("code lab")),
+        area,
+    );
+}
+
+fn draw_daily_goals(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
+    let daily = &app.code_lab.daily;
+    let lines = [&daily.lessons, &daily.exercises]
+        .into_iter()
+        .map(|goal| {
+            let color = if goal.complete() {
+                theme.success
+            } else {
+                theme.warning
+            };
+            Line::from(vec![
+                Span::styled(
+                    format!("{:<10} ", goal.label),
+                    Style::default().fg(theme.muted),
+                ),
+                Span::styled(
+                    format!("{}/{}", goal.done, goal.target),
+                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                ),
+            ])
+        })
+        .collect::<Vec<_>>();
+    let title = if daily.day.is_empty() {
+        "objetivos diarios".to_string()
+    } else {
+        format!("objetivos diarios · {}", daily.day)
+    };
+    frame.render_widget(
+        Paragraph::new(lines)
+            .style(theme.base())
+            .block(theme.block(&title)),
         area,
     );
 }
@@ -2207,6 +2248,18 @@ mod tests {
         let rendered = render(110, 32, &app, &ui);
         assert!(rendered.contains("cuestionario"));
         assert!(rendered.contains(&truncate(&prompt, 60)));
+    }
+
+    #[test]
+    fn stats_screen_shows_daily_goals() {
+        let (_temp, mut app) = fixture();
+        app.refresh_code_lab().unwrap();
+        app.set_screen(Screen::Stats).unwrap();
+        let ui = UiState::default();
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("objetivos diarios"));
+        assert!(rendered.contains("lecciones"));
+        assert!(rendered.contains("ejercicios"));
     }
 
     #[test]

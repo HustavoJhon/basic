@@ -10,9 +10,9 @@ use std::time::Instant;
 
 use crate::code_lab::app::{CodeLabService, LessonView};
 use crate::code_lab::domain::{
-    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, DEFAULT_LANGUAGE, Difficulty,
-    Exercise, ExerciseProgress, ItemType, NoteBacklink, NoteItemType, NoteLink, QuizResult,
-    note_template,
+    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, DEFAULT_LANGUAGE, DailyProgress,
+    Difficulty, Exercise, ExerciseProgress, ItemType, NoteBacklink, NoteItemType, NoteLink,
+    QuizResult, note_template,
 };
 use crate::code_lab::runners::{self, RunOutcome, RunRequest};
 use crate::config::Config;
@@ -121,6 +121,7 @@ pub struct CodeLabState {
     pub exercises: Vec<Exercise>,
     pub progress: HashMap<i64, ExerciseProgress>,
     pub stats: CodeLabStats,
+    pub daily: DailyProgress,
     pub items: Vec<CodeLabItem>,
     pub concepts: Vec<ConceptReview>,
     pub concept_index: usize,
@@ -137,6 +138,7 @@ impl Default for CodeLabState {
             exercises: Vec::new(),
             progress: HashMap::new(),
             stats: CodeLabStats::default(),
+            daily: DailyProgress::default(),
             items: Vec::new(),
             concepts: Vec::new(),
             concept_index: 0,
@@ -617,10 +619,13 @@ impl App {
 
     /// Recarga el catálogo y el progreso de todas las dificultades.
     pub fn refresh_code_lab(&mut self) -> Result<(), BasicError> {
+        let lesson_target = self.config.code_lab.daily_lessons;
+        let exercise_target = self.config.code_lab.daily_exercises;
         let mut service = CodeLabService::new(&mut self.database);
         service.seed()?;
         let all = service.exercises()?;
         let stats = service.stats()?;
+        let daily = service.daily_progress(lesson_target, exercise_target)?;
         let items = service.learning_items()?;
         let concepts = service.due_concepts()?;
         let mut progress = HashMap::new();
@@ -633,6 +638,7 @@ impl App {
             .collect();
         self.code_lab.progress = progress;
         self.code_lab.stats = stats;
+        self.code_lab.daily = daily;
         self.code_lab.items = items;
         self.code_lab.concepts = concepts;
         if self.code_lab.concepts.is_empty() {
