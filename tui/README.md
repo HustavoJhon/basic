@@ -2,12 +2,13 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
-> Estado: **F2–F19 implementadas**. Incluye TUI Gruvbox, indexado incremental,
+> Estado: **F2–F20 implementadas**. Incluye TUI Gruvbox, indexado incremental,
 > explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
 > Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Code Lab añade el
-> esquema v4, el dominio del lenguaje, el editor TUI reutilizable, el runner
+> esquema v5, el dominio del lenguaje, el editor TUI reutilizable, el runner
 > síncrono de C#, lecciones con cuestionario, ejercicios con borradores e
-> intentos, filtro por dificultad, repaso de conceptos y estadísticas propias.
+> intentos, filtro por dificultad, repaso de conceptos, estadísticas propias y
+> notas Markdown enlazadas.
 > Markdown es la fuente de verdad; SQLite es índice y estado complementario.
 > Las notas existentes nunca se reescriben automáticamente.
 
@@ -53,6 +54,8 @@ basic code-lab lessons        # lista las lecciones de C#
 basic code-lab lessons --json
 basic code-lab stats           # progreso agregado de lecciones y ejercicios
 basic code-lab stats --json
+basic code-lab notes           # notas Markdown enlazadas con Code Lab
+basic code-lab notes --json
 
 basic doctor                  # diagnóstico legible
 basic doctor --json           # informe estructurado
@@ -100,6 +103,7 @@ coincidencia difusa y ordena por relevancia.
 | `1`–`4` (lección) | responder una pregunta del cuestionario |
 | `Enter` (lección) | enviar el cuestionario |
 | `1`–`4` (conceptos) | calificar el concepto actual |
+| `n` / `Ctrl+N` | crear o abrir la nota enlazada del elemento |
 | `?` | ayuda contextual |
 | `q` / `Esc` | salir / volver |
 
@@ -145,6 +149,19 @@ La pantalla de estadísticas muestra, junto al heatmap, las lecciones
 completadas, los ejercicios resueltos, los intentos superados, los conceptos
 pendientes y el tiempo acumulado en Code Lab. `basic code-lab stats` ofrece el
 mismo resumen para scripts.
+
+### Notas de Code Lab en el vault
+
+En una lección o un concepto pulsa `n`; en un ejercicio, `Ctrl+N` (la tecla `n`
+escribe en el editor). Se propone una ruta bajo `code-lab/` con una plantilla
+que incluye el enunciado o el contenido de la lección, conceptos y pistas. La
+nota se crea con el mismo frontmatter que `basic new`, se indexa y se guarda el
+enlace en SQLite. Si ya existe un enlace, la misma tecla abre la nota en el
+lector en vez de crear otra. Ninguna nota existente se sobrescribe.
+
+`basic code-lab notes [--json]` lista los enlaces. El archivo Markdown sigue
+siendo la fuente de verdad: borrar la nota no borra el enlace, y borrar el
+enlace no toca el archivo.
 
 ### Códigos de salida
 
