@@ -1,13 +1,16 @@
 //! Casos de uso de Code Lab. No conoce Ratatui ni procesos externos.
 
 use crate::code_lab::domain::{
-    AttemptSummary, Exercise, ExerciseProgress, Lesson, LessonProgress, QuizResult,
+    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, Exercise, ExerciseProgress, Lesson,
+    LessonProgress, QuizResult,
 };
 use crate::code_lab::infra::{
-    LessonDetail, SeedReport, exercise_detail, exercise_progress, lesson_detail, lesson_progress,
-    list_exercises, list_lessons, load_draft, open_exercise, open_lesson, record_attempt,
-    record_lesson_time, reveal_solution, save_draft, seed_catalog, submit_quiz,
+    LessonDetail, SeedReport, code_lab_stats, due_concepts, exercise_detail, exercise_progress,
+    learning_items, lesson_detail, lesson_progress, list_exercises, list_lessons, load_draft,
+    open_exercise, open_lesson, rate_concept, record_attempt, record_lesson_time, reveal_solution,
+    save_draft, seed_catalog, submit_quiz,
 };
+use crate::domain::{ReviewOutcome, ReviewRating};
 use crate::error::BasicError;
 use crate::infra::sqlite::Database;
 
@@ -111,6 +114,29 @@ impl<'a> CodeLabService<'a> {
         summary: &AttemptSummary,
     ) -> Result<i64, BasicError> {
         record_attempt(self.database, exercise_id, code, summary)
+    }
+
+    /// Estadísticas del catálogo y del progreso de práctica.
+    pub fn stats(&self) -> Result<CodeLabStats, BasicError> {
+        code_lab_stats(self.database, crate::infra::catalog::unix_now())
+    }
+
+    /// Conceptos con repaso pendiente.
+    pub fn due_concepts(&self) -> Result<Vec<ConceptReview>, BasicError> {
+        due_concepts(self.database, crate::infra::catalog::unix_now())
+    }
+
+    pub fn rate_concept(
+        &mut self,
+        concept_id: i64,
+        rating: ReviewRating,
+    ) -> Result<ReviewOutcome, BasicError> {
+        rate_concept(self.database, concept_id, rating)
+    }
+
+    /// Elementos que Learning Mode debe mostrar para continuar.
+    pub fn learning_items(&self) -> Result<Vec<CodeLabItem>, BasicError> {
+        learning_items(self.database)
     }
 }
 

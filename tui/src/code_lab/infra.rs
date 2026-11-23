@@ -8,10 +8,12 @@ use serde::Serialize;
 
 use crate::code_lab::catalog::{TestCaseSeed, all_catalogs};
 use crate::code_lab::domain::{
-    AnswerResult, AttemptStatus, AttemptSummary, Example, Exercise, ExerciseProgress,
-    ExerciseStatus, Lesson, LessonProgress, LessonStatus, QuizQuestion, QuizResult, TestCase,
-    TestSpec, lesson_status_after_open, lesson_status_after_quiz,
+    AnswerResult, AttemptStatus, AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, Example,
+    Exercise, ExerciseProgress, ExerciseStatus, ItemType, Lesson, LessonProgress, LessonStatus,
+    QuizQuestion, QuizResult, TestCase, TestSpec, lesson_status_after_open,
+    lesson_status_after_quiz,
 };
+use crate::domain::{ReviewOutcome, ReviewRating, schedule_review};
 use crate::error::BasicError;
 use crate::infra::catalog::unix_now;
 use crate::infra::sqlite::Database;
@@ -90,6 +92,14 @@ pub fn seed_catalog(database: &mut Database) -> Result<SeedReport, BasicError> {
                 }
             })?;
             let concepts = to_json(&lesson.concepts)?;
+            for concept in lesson.concepts {
+                transaction.execute(
+                    "INSERT OR IGNORE INTO code_lab_concept_review
+                     (language, concept, level, ease_factor)
+                     VALUES (?1, ?2, ?3, 2.5)",
+                    rusqlite::params![catalog.language.code, concept, lesson.order_index],
+                )?;
+            }
             transaction.execute(
                 "INSERT INTO code_lab_lessons
                  (path_id, slug, title, summary, content_md, concepts_json,
@@ -152,6 +162,14 @@ pub fn seed_catalog(database: &mut Database) -> Result<SeedReport, BasicError> {
                 .lesson_slug
                 .and_then(|slug| lesson_ids.get(slug).copied());
             let concepts = to_json(&exercise.concepts)?;
+            for concept in exercise.concepts {
+                transaction.execute(
+                    "INSERT OR IGNORE INTO code_lab_concept_review
+                     (language, concept, level, ease_factor)
+                     VALUES (?1, ?2, ?3, 2.5)",
+                    rusqlite::params![catalog.language.code, concept, exercise.level],
+                )?;
+            }
             let examples = to_json(
                 &exercise
                     .examples
@@ -580,6 +598,178 @@ pub fn record_attempt(
     Ok(attempt_id)
 }
 
+/// Resumen agregado de Code Lab para la TUI y la CLI.
+pub fn code_lab_stats(database: &Database, now: i64) -> Result<CodeLabStats, BasicError> {
+    Ok(database.connection().query_row(
+        "SELECT
+            (SELECT count(*) FROM code_lab_languages),
+            (SELECT count(*) FROM code_lab_paths),
+            (SELECT count(*) FROM code_lab_lessons),
+            (SELECT count(*) FROM code_lab_lesson_progress WHERE status = 'completed'),
+            (SELECT count(*) FROM code_lab_exercises),
+            (SELECT count(*) FROM code_lab_exercise_progress WHERE status = 'solved'),
+            (SELECT count(*) FROM code_lab_attempts),
+            (SELECT count(*) FROM code_lab_attempts WHERE status = 'passed'),
+            (SELECT COALESCE(sum(seconds_spent), 0) FROM code_lab_lesson_progress)
+             + (SELECT COALESCE(sum(seconds_spent), 0) FROM code_lab_exercise_progress),
+            (SELECT count(*) FROM code_lab_concept_review
+             WHERE due_at IS NULL OR due_at <= ?1)",
+        [now],
+        |row| {
+            let count = |index: usize| -> Result<i32, rusqlite::Error> {
+                i32::try_from(row.get::<_, i64>(index)?).map_err(|_| {
+                    rusqlite::Error::InvalidColumnType(
+                        index,
+                        "count".to_string(),
+                        rusqlite::types::Type::Integer,
+                    )
+                })
+            };
+            Ok(CodeLabStats {
+                languages: count(0)?,
+                paths: count(1)?,
+                lessons: count(2)?,
+                lessons_completed: count(3)?,
+                exercises: count(4)?,
+                exercises_solved: count(5)?,
+                attempts: count(6)?,
+                attempts_passed: count(7)?,
+                seconds_spent: row.get(8)?,
+                concepts_due: count(9)?,
+            })
+        },
+    )?)
+}
+
+/// Conceptos con repaso pendiente, ordenados por antigüedad.
+pub fn due_concepts(database: &Database, now: i64) -> Result<Vec<ConceptReview>, BasicError> {
+    let mut statement = database.connection().prepare(
+        "SELECT id, language, concept, level, interval_days, ease_factor,
+                due_at, lapses, last_reviewed_at
+         FROM code_lab_concept_review
+         WHERE due_at IS NULL OR due_at <= ?1
+         ORDER BY due_at IS NULL DESC, due_at, concept
+         LIMIT 50",
+    )?;
+    statement
+        .query_map([now], row_to_concept)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(BasicError::from)
+}
+
+/// Califica un concepto y programa su siguiente repaso con SM-2.
+pub fn rate_concept(
+    database: &mut Database,
+    concept_id: i64,
+    rating: ReviewRating,
+) -> Result<ReviewOutcome, BasicError> {
+    let now = unix_now();
+    let previous = database
+        .connection()
+        .query_row(
+            "SELECT language, concept, level, interval_days, ease_factor, lapses
+             FROM code_lab_concept_review WHERE id = ?1",
+            [concept_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i32>(2)?,
+                    row.get::<_, i32>(3)?,
+                    row.get::<_, f64>(4)?,
+                    row.get::<_, i32>(5)?,
+                ))
+            },
+        )
+        .optional()?
+        .ok_or_else(|| BasicError::InvalidConfig {
+            path: PathBuf::from("code_lab/concepts"),
+            message: format!("concepto {concept_id} no encontrado"),
+        })?;
+    let outcome = schedule_review(rating, i64::from(previous.3), previous.4);
+    let next_due = now + outcome.due_in_days * 86_400;
+    database.connection().execute(
+        "INSERT INTO code_lab_concept_review
+         (id, language, concept, level, interval_days, ease_factor, due_at,
+          lapses, last_reviewed_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(id) DO UPDATE SET
+             interval_days = excluded.interval_days,
+             ease_factor = excluded.ease_factor,
+             due_at = excluded.due_at,
+             lapses = excluded.lapses,
+             last_reviewed_at = excluded.last_reviewed_at",
+        rusqlite::params![
+            concept_id,
+            previous.0,
+            previous.1,
+            previous.2,
+            outcome.interval_days,
+            outcome.ease_factor,
+            next_due,
+            previous.5 + i32::from(rating == ReviewRating::Again),
+            now
+        ],
+    )?;
+    Ok(outcome)
+}
+
+/// Lecciones en curso o a repasar y ejercicios intentados o a repasar.
+pub fn learning_items(database: &Database) -> Result<Vec<CodeLabItem>, BasicError> {
+    let mut statement = database.connection().prepare(
+        "SELECT id, kind, title, subtitle, status, due_at FROM (
+            SELECT l.id AS id, 'lesson' AS kind, l.title AS title,
+                   l.summary AS subtitle, COALESCE(p.status, 'not_started') AS status,
+                   p.review_due_at AS due_at, l.order_index AS ordering
+            FROM code_lab_lessons l
+            LEFT JOIN code_lab_lesson_progress p ON p.lesson_id = l.id
+            WHERE COALESCE(p.status, 'not_started') IN ('in_progress', 'needs_review')
+            UNION ALL
+            SELECT e.id, 'exercise', e.title, e.topic,
+                   COALESCE(p.status, 'not_started'), p.updated_at, e.level
+            FROM code_lab_exercises e
+            LEFT JOIN code_lab_exercise_progress p ON p.exercise_id = e.id
+            WHERE COALESCE(p.status, 'not_started') IN ('attempted', 'needs_review')
+         ) ORDER BY ordering, id LIMIT 40",
+    )?;
+    statement
+        .query_map([], |row| {
+            let kind = match row.get::<_, String>(1)?.as_str() {
+                "exercise" => ItemType::Exercise,
+                _ => ItemType::Lesson,
+            };
+            let status = row.get::<_, String>(4)?;
+            let label = match kind {
+                ItemType::Lesson => LessonStatus::parse(&status).label(),
+                ItemType::Exercise => ExerciseStatus::parse(&status).label(),
+            };
+            Ok(CodeLabItem {
+                id: row.get(0)?,
+                kind,
+                title: row.get(2)?,
+                subtitle: row.get(3)?,
+                status: label.to_string(),
+                due_at: row.get(5)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(BasicError::from)
+}
+
+fn row_to_concept(row: &Row<'_>) -> Result<ConceptReview, rusqlite::Error> {
+    Ok(ConceptReview {
+        id: row.get(0)?,
+        language: row.get(1)?,
+        concept: row.get(2)?,
+        level: row.get(3)?,
+        interval_days: row.get(4)?,
+        ease_factor: row.get(5)?,
+        due_at: row.get(6)?,
+        lapses: row.get(7)?,
+        last_reviewed_at: row.get(8)?,
+    })
+}
+
 fn row_to_lesson(row: &Row<'_>) -> Result<Lesson, rusqlite::Error> {
     Ok(Lesson {
         id: row.get(0)?,
@@ -943,6 +1133,84 @@ mod tests {
         assert_eq!(solved.attempts, 2);
         assert_eq!(solved.best_tests_passed, 4);
         assert!(solved.solved_at.is_some());
+    }
+
+    #[test]
+    fn seed_prepares_concepts_and_aggregated_stats() {
+        let database = seeded();
+        let now = crate::infra::catalog::unix_now();
+        let concepts = due_concepts(&database, now).unwrap();
+        assert!(!concepts.is_empty());
+        let stats = code_lab_stats(&database, now).unwrap();
+        assert_eq!(stats.lessons, 5);
+        assert_eq!(stats.exercises, 6);
+        assert_eq!(stats.concepts_due, concepts.len() as i32);
+        assert_eq!(stats.attempts, 0);
+    }
+
+    #[test]
+    fn rating_a_concept_schedules_its_next_review() {
+        let mut database = seeded();
+        let concept =
+            due_concepts(&database, crate::infra::catalog::unix_now()).unwrap()[0].clone();
+        let now = crate::infra::catalog::unix_now();
+        let outcome = rate_concept(&mut database, concept.id, ReviewRating::Again).unwrap();
+        assert_eq!(outcome.interval_days, 1);
+        assert!(outcome.due_in_days > 0);
+
+        let updated = database
+            .connection()
+            .query_row(
+                "SELECT interval_days, lapses, due_at FROM code_lab_concept_review WHERE id = ?1",
+                [concept.id],
+                |row| {
+                    Ok((
+                        row.get::<_, i32>(0)?,
+                        row.get::<_, i32>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .unwrap();
+        assert_eq!(updated.0, 1);
+        assert_eq!(updated.1, 1);
+        assert!(updated.2 > now);
+        assert!(
+            !due_concepts(&database, now)
+                .unwrap()
+                .iter()
+                .any(|item| item.id == concept.id)
+        );
+    }
+
+    #[test]
+    fn learning_items_reflect_progress() {
+        let mut database = seeded();
+        let lesson = first_lesson(&database);
+        open_lesson(&mut database, lesson).unwrap();
+        let exercise = list_exercises(&database, "csharp").unwrap()[0].id;
+        open_exercise(&mut database, exercise).unwrap();
+        let failed = AttemptSummary {
+            status: AttemptStatus::Failed,
+            duration_ms: 100,
+            tests_passed: 0,
+            tests_total: 4,
+            compile_ok: Some(true),
+            executions: Vec::new(),
+        };
+        record_attempt(&mut database, exercise, "código", &failed).unwrap();
+
+        let items = learning_items(&database).unwrap();
+        assert!(
+            items
+                .iter()
+                .any(|item| item.id == lesson && item.kind == ItemType::Lesson)
+        );
+        assert!(
+            items
+                .iter()
+                .any(|item| item.id == exercise && item.kind == ItemType::Exercise)
+        );
     }
 
     #[test]

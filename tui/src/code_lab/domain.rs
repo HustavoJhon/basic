@@ -583,6 +583,24 @@ pub struct ConceptReview {
     pub last_reviewed_at: Option<i64>,
 }
 
+impl ConceptReview {
+    /// Los conceptos nuevos entran en la cola desde el primer día.
+    pub fn is_due(&self, now: i64) -> bool {
+        self.due_at.is_none_or(|due| due <= now)
+    }
+}
+
+/// Elemento de Code Lab que necesita atención en Learning Mode.
+#[derive(Debug, Clone)]
+pub struct CodeLabItem {
+    pub id: i64,
+    pub kind: ItemType,
+    pub title: String,
+    pub subtitle: String,
+    pub status: String,
+    pub due_at: Option<i64>,
+}
+
 /// Resumen de Code Lab para dashboard y estadísticas.
 #[derive(Debug, Clone, Default)]
 pub struct CodeLabStats {
