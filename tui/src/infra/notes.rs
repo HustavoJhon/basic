@@ -25,6 +25,21 @@ pub fn create_note(
     title: Option<&str>,
 ) -> Result<CreatedNote, BasicError> {
     let relative = normalize_note_path(relative)?;
+    let title = title
+        .map(ToString::to_string)
+        .filter(|title| !title.trim().is_empty())
+        .unwrap_or_else(|| prettify_stem(&relative));
+    let body = render_note(config, &title);
+    create_note_with_body(config, &relative, &body)
+}
+
+/// Crea una nota con un cuerpo dado. Nunca sobrescribe una nota existente.
+pub fn create_note_with_body(
+    config: &Config,
+    relative: &str,
+    body: &str,
+) -> Result<CreatedNote, BasicError> {
+    let relative = normalize_note_path(relative)?;
     let absolute = config.vault.join(&relative);
     if absolute.exists() {
         return Err(BasicError::InvalidConfig {
@@ -32,21 +47,15 @@ pub fn create_note(
             message: "la nota ya existe; elige otra ruta".to_string(),
         });
     }
-
-    let title = title
-        .map(ToString::to_string)
-        .filter(|title| !title.trim().is_empty())
-        .unwrap_or_else(|| prettify_stem(&relative));
-    let body = render_note(config, &title);
     atomic_write(&absolute, body.as_bytes())?;
-
     Ok(CreatedNote {
         path: absolute,
         relative,
     })
 }
 
-fn normalize_note_path(value: &str) -> Result<String, BasicError> {
+/// Normaliza una ruta relativa al vault y añade `.md` cuando falta.
+pub fn normalize_note_path(value: &str) -> Result<String, BasicError> {
     let value = value.trim();
     if value.is_empty() {
         return Err(BasicError::InvalidConfig {
@@ -90,14 +99,19 @@ fn normalize_note_path(value: &str) -> Result<String, BasicError> {
 }
 
 fn render_note(config: &Config, title: &str) -> String {
+    render_note_body(config, title, "")
+}
+
+/// Añade el frontmatter y el título configurados al cuerpo de una nota.
+pub fn render_note_body(config: &Config, title: &str, body: &str) -> String {
     let escaped = title.replace('"', "\\\"");
     if config.frontmatter {
         format!(
-            "---\ntitle: \"{escaped}\"\ncreated: {}\ntags: []\n---\n\n# {title}\n\n",
+            "---\ntitle: \"{escaped}\"\ncreated: {}\ntags: []\n---\n\n# {title}\n\n{body}",
             Local::now().format("%Y-%m-%d")
         )
     } else {
-        format!("# {title}\n\n")
+        format!("# {title}\n\n{body}")
     }
 }
 

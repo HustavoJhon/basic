@@ -1,14 +1,15 @@
 //! Casos de uso de Code Lab. No conoce Ratatui ni procesos externos.
 
 use crate::code_lab::domain::{
-    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, Exercise, ExerciseProgress, Lesson,
-    LessonProgress, QuizResult,
+    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, DEFAULT_LANGUAGE, Exercise,
+    ExerciseProgress, Lesson, LessonProgress, NoteItemType, NoteLink, QuizResult,
 };
 use crate::code_lab::infra::{
-    LessonDetail, SeedReport, code_lab_stats, due_concepts, exercise_detail, exercise_progress,
-    learning_items, lesson_detail, lesson_progress, list_exercises, list_lessons, load_draft,
-    open_exercise, open_lesson, rate_concept, record_attempt, record_lesson_time, reveal_solution,
-    save_draft, seed_catalog, submit_quiz,
+    LessonDetail, SeedReport, code_lab_stats, concept, due_concepts, exercise_detail,
+    exercise_progress, learning_items, lesson_detail, lesson_progress, list_exercises,
+    list_lessons, load_draft, note_link, note_links, open_exercise, open_lesson, rate_concept,
+    record_attempt, record_lesson_time, reveal_solution, save_draft, save_note_link, seed_catalog,
+    submit_quiz,
 };
 use crate::domain::{ReviewOutcome, ReviewRating};
 use crate::error::BasicError;
@@ -126,6 +127,10 @@ impl<'a> CodeLabService<'a> {
         due_concepts(self.database, crate::infra::catalog::unix_now())
     }
 
+    pub fn concept(&self, concept_id: i64) -> Result<Option<ConceptReview>, BasicError> {
+        concept(self.database, concept_id)
+    }
+
     pub fn rate_concept(
         &mut self,
         concept_id: i64,
@@ -137,6 +142,22 @@ impl<'a> CodeLabService<'a> {
     /// Elementos que Learning Mode debe mostrar para continuar.
     pub fn learning_items(&self) -> Result<Vec<CodeLabItem>, BasicError> {
         learning_items(self.database)
+    }
+
+    pub fn note_link(
+        &self,
+        item_type: NoteItemType,
+        item_id: i64,
+    ) -> Result<Option<NoteLink>, BasicError> {
+        note_link(self.database, DEFAULT_LANGUAGE, item_type, item_id)
+    }
+
+    pub fn save_note_link(&mut self, link: &NoteLink) -> Result<(), BasicError> {
+        save_note_link(self.database, link)
+    }
+
+    pub fn note_links(&self) -> Result<Vec<NoteLink>, BasicError> {
+        note_links(self.database)
     }
 }
 

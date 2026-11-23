@@ -226,6 +226,54 @@ impl ItemType {
     }
 }
 
+/// Tipo de elemento que puede tener una nota Markdown enlazada.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NoteItemType {
+    Lesson,
+    Exercise,
+    Concept,
+}
+
+impl NoteItemType {
+    pub const ALL: [Self; 3] = [Self::Lesson, Self::Exercise, Self::Concept];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Lesson => "lesson",
+            Self::Exercise => "exercise",
+            Self::Concept => "concept",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Lesson => "lección",
+            Self::Exercise => "ejercicio",
+            Self::Concept => "concepto",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "lesson" => Some(Self::Lesson),
+            "exercise" => Some(Self::Exercise),
+            "concept" => Some(Self::Concept),
+            _ => None,
+        }
+    }
+}
+
+/// Enlace persistido entre un elemento de Code Lab y una nota del vault.
+#[derive(Debug, Clone, Serialize)]
+pub struct NoteLink {
+    pub language: String,
+    pub item_type: NoteItemType,
+    pub item_id: i64,
+    pub note_path: String,
+    pub document_id: Option<i64>,
+}
+
 /// Ejemplo visible en el enunciado.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Example {

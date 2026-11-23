@@ -334,6 +334,16 @@ pub fn learn_documents(database: &Database, mode: LearnMode) -> Result<Vec<Docum
     Ok(rows)
 }
 
+/// Devuelve un documento indexado por su ruta relativa al vault.
+pub fn document_by_path(database: &Database, path: &str) -> Result<Option<Document>, BasicError> {
+    let sql = format!("{DOCUMENT_SELECT} WHERE d.path = ?1");
+    database
+        .connection()
+        .query_row(&sql, [path], document_from_row)
+        .optional()
+        .map_err(BasicError::from)
+}
+
 /// Documentos con repaso pendiente.
 pub fn due_documents(database: &Database) -> Result<Vec<Document>, BasicError> {
     learn_documents(database, LearnMode::Review)

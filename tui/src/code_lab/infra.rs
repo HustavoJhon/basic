@@ -10,7 +10,7 @@ use crate::code_lab::catalog::{TestCaseSeed, all_catalogs};
 use crate::code_lab::domain::{
     AnswerResult, AttemptStatus, AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, Example,
     Exercise, ExerciseProgress, ExerciseStatus, ItemType, Lesson, LessonProgress, LessonStatus,
-    QuizQuestion, QuizResult, TestCase, TestSpec, lesson_status_after_open,
+    NoteItemType, NoteLink, QuizQuestion, QuizResult, TestCase, TestSpec, lesson_status_after_open,
     lesson_status_after_quiz,
 };
 use crate::domain::{ReviewOutcome, ReviewRating, schedule_review};
@@ -657,6 +657,21 @@ pub fn due_concepts(database: &Database, now: i64) -> Result<Vec<ConceptReview>,
         .map_err(BasicError::from)
 }
 
+/// Concepto concreto, para enlazar su nota desde la cola de repaso.
+pub fn concept(database: &Database, concept_id: i64) -> Result<Option<ConceptReview>, BasicError> {
+    database
+        .connection()
+        .query_row(
+            "SELECT id, language, concept, level, interval_days, ease_factor,
+                    due_at, lapses, last_reviewed_at
+             FROM code_lab_concept_review WHERE id = ?1",
+            [concept_id],
+            row_to_concept,
+        )
+        .optional()
+        .map_err(BasicError::from)
+}
+
 /// Califica un concepto y programa su siguiente repaso con SM-2.
 pub fn rate_concept(
     database: &mut Database,
@@ -754,6 +769,74 @@ pub fn learning_items(database: &Database) -> Result<Vec<CodeLabItem>, BasicErro
         })?
         .collect::<Result<Vec<_>, _>>()
         .map_err(BasicError::from)
+}
+
+/// Nota enlazada con un elemento concreto de Code Lab.
+pub fn note_link(
+    database: &Database,
+    language: &str,
+    item_type: NoteItemType,
+    item_id: i64,
+) -> Result<Option<NoteLink>, BasicError> {
+    database
+        .connection()
+        .query_row(
+            "SELECT language, item_type, item_id, note_path, document_id
+             FROM code_lab_note_links
+             WHERE language = ?1 AND item_type = ?2 AND item_id = ?3",
+            rusqlite::params![language, item_type.as_str(), item_id],
+            row_to_note_link,
+        )
+        .optional()
+        .map_err(BasicError::from)
+}
+
+/// Guarda o actualiza el enlace. Nunca escribe la nota en el vault.
+pub fn save_note_link(database: &mut Database, link: &NoteLink) -> Result<(), BasicError> {
+    database.connection().execute(
+        "INSERT INTO code_lab_note_links
+         (language, item_type, item_id, note_path, document_id, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(language, item_type, item_id) DO UPDATE SET
+             note_path = excluded.note_path,
+             document_id = excluded.document_id",
+        rusqlite::params![
+            link.language,
+            link.item_type.as_str(),
+            link.item_id,
+            link.note_path,
+            link.document_id,
+            unix_now()
+        ],
+    )?;
+    Ok(())
+}
+
+/// Todas las notas enlazadas, para la CLI y el diagnóstico.
+pub fn note_links(database: &Database) -> Result<Vec<NoteLink>, BasicError> {
+    let mut statement = database.connection().prepare(
+        "SELECT language, item_type, item_id, note_path, document_id
+         FROM code_lab_note_links
+         ORDER BY language, item_type, item_id",
+    )?;
+    statement
+        .query_map([], row_to_note_link)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(BasicError::from)
+}
+
+fn row_to_note_link(row: &Row<'_>) -> Result<NoteLink, rusqlite::Error> {
+    let raw_type = row.get::<_, String>(1)?;
+    let item_type = NoteItemType::parse(&raw_type).ok_or_else(|| {
+        rusqlite::Error::InvalidColumnType(1, "item_type".to_string(), rusqlite::types::Type::Text)
+    })?;
+    Ok(NoteLink {
+        language: row.get(0)?,
+        item_type,
+        item_id: row.get(2)?,
+        note_path: row.get(3)?,
+        document_id: row.get(4)?,
+    })
 }
 
 fn row_to_concept(row: &Row<'_>) -> Result<ConceptReview, rusqlite::Error> {
@@ -1210,6 +1293,44 @@ mod tests {
             items
                 .iter()
                 .any(|item| item.id == exercise && item.kind == ItemType::Exercise)
+        );
+    }
+
+    #[test]
+    fn note_links_round_trip_and_do_not_write_the_vault() {
+        let mut database = seeded();
+        let lesson = first_lesson(&database);
+        assert!(
+            note_link(&database, "csharp", NoteItemType::Lesson, lesson)
+                .unwrap()
+                .is_none()
+        );
+
+        let link = NoteLink {
+            language: "csharp".to_string(),
+            item_type: NoteItemType::Lesson,
+            item_id: lesson,
+            note_path: "code-lab/csharp/primer-programa.md".to_string(),
+            document_id: None,
+        };
+        save_note_link(&mut database, &link).unwrap();
+        let stored = note_link(&database, "csharp", NoteItemType::Lesson, lesson)
+            .unwrap()
+            .unwrap();
+        assert_eq!(stored.note_path, link.note_path);
+
+        let updated = NoteLink {
+            note_path: "code-lab/otra-nota.md".to_string(),
+            ..link
+        };
+        save_note_link(&mut database, &updated).unwrap();
+        assert_eq!(note_links(&database).unwrap().len(), 1);
+        assert_eq!(
+            note_link(&database, "csharp", NoteItemType::Lesson, lesson)
+                .unwrap()
+                .unwrap()
+                .note_path,
+            "code-lab/otra-nota.md"
         );
     }
 
