@@ -210,6 +210,7 @@ impl LanguageRunner for CSharpRunner {
             cases.push(CaseResult {
                 name: case.name.clone(),
                 passed: case_passed,
+                visible: case.visible,
                 expected,
                 actual,
                 duration_ms: execution.duration_ms,
@@ -416,6 +417,7 @@ mod tests {
         assert!(outcome.passed(), "{:?}", outcome.first_error());
         assert_eq!(outcome.tests_passed, 1);
         assert_eq!(outcome.cases[0].actual, "3");
+        assert!(outcome.cases[0].visible);
     }
 
     #[test]

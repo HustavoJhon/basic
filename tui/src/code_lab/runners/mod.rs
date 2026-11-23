@@ -12,7 +12,7 @@ mod workspace;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use crate::code_lab::domain::{AttemptStatus, ExecutionResult, TestSpec};
+use crate::code_lab::domain::{AttemptStatus, AttemptSummary, ExecutionResult, TestSpec};
 use crate::error::BasicError;
 
 pub use csharp::CSharpRunner;
@@ -58,6 +58,8 @@ impl RunRequest {
 pub struct CaseResult {
     pub name: String,
     pub passed: bool,
+    /// Los casos ocultos se ejecutan, pero la UI no muestra su contenido.
+    pub visible: bool,
     pub expected: String,
     pub actual: String,
     pub duration_ms: u64,
@@ -93,6 +95,19 @@ impl RunOutcome {
                     Some(output)
                 }
             })
+    }
+}
+
+impl From<&RunOutcome> for AttemptSummary {
+    fn from(outcome: &RunOutcome) -> Self {
+        Self {
+            status: outcome.status,
+            duration_ms: outcome.duration_ms,
+            tests_passed: outcome.tests_passed,
+            tests_total: outcome.tests_total,
+            compile_ok: outcome.compile_ok,
+            executions: outcome.executions.clone(),
+        }
     }
 }
 
@@ -137,6 +152,24 @@ mod tests {
             "csharp"
         );
         assert!(runner_for("rust").is_none());
+    }
+
+    #[test]
+    fn outcome_converts_to_a_persistable_attempt_summary() {
+        let outcome = RunOutcome {
+            status: AttemptStatus::Passed,
+            sdk_version: Some("10.0.400".to_string()),
+            compile_ok: Some(true),
+            tests_passed: 2,
+            tests_total: 2,
+            duration_ms: 1500,
+            executions: Vec::new(),
+            cases: Vec::new(),
+        };
+        let summary = AttemptSummary::from(&outcome);
+        assert_eq!(summary.status, AttemptStatus::Passed);
+        assert_eq!(summary.duration_seconds(), 1);
+        assert_eq!(summary.score(), 1.0);
     }
 
     #[test]

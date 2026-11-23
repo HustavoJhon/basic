@@ -520,6 +520,30 @@ impl Attempt {
     }
 }
 
+/// Datos de un intento listos para persistir, sin depender de runners ni UI.
+#[derive(Debug, Clone)]
+pub struct AttemptSummary {
+    pub status: AttemptStatus,
+    pub duration_ms: u64,
+    pub tests_passed: i32,
+    pub tests_total: i32,
+    pub compile_ok: Option<bool>,
+    pub executions: Vec<ExecutionResult>,
+}
+
+impl AttemptSummary {
+    pub fn duration_seconds(&self) -> i64 {
+        i64::try_from(self.duration_ms / 1000).unwrap_or(i64::MAX)
+    }
+
+    pub fn score(&self) -> f64 {
+        if self.tests_total <= 0 {
+            return 0.0;
+        }
+        f64::from(self.tests_passed) / f64::from(self.tests_total)
+    }
+}
+
 /// Resultado de una fase de ejecución.
 #[derive(Debug, Clone)]
 pub struct ExecutionResult {

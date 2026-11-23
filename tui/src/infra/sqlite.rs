@@ -7,7 +7,7 @@ use rusqlite::{Connection, OpenFlags};
 use crate::error::BasicError;
 
 /// Última versión de esquema que entiende este binario.
-pub const LATEST_SCHEMA_VERSION: u32 = 3;
+pub const LATEST_SCHEMA_VERSION: u32 = 4;
 
 /// Tablas que deben existir tras aplicar todas las migraciones.
 ///
@@ -35,7 +35,9 @@ pub const EXPECTED_TABLES: &[&str] = &[
     "code_lab_exercises",
     "code_lab_lesson_progress",
     "code_lab_exercise_progress",
+    "code_lab_drafts",
     "code_lab_attempts",
+    "code_lab_attempt_code",
     "code_lab_executions",
     "code_lab_concept_review",
     "code_lab_favorites",
@@ -73,6 +75,14 @@ pub const MIGRATIONS: &[Migration] = &[
         sql: include_str!("../../migrations/0003_code_lab_quizzes.sql"),
         down_sql: Some(include_str!(
             "../../migrations/0003_code_lab_quizzes.down.sql"
+        )),
+    },
+    Migration {
+        version: 4,
+        name: "code_lab_practice",
+        sql: include_str!("../../migrations/0004_code_lab_practice.sql"),
+        down_sql: Some(include_str!(
+            "../../migrations/0004_code_lab_practice.down.sql"
         )),
     },
 ];
