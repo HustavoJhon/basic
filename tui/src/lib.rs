@@ -6,6 +6,7 @@
 
 pub mod app;
 pub mod cli;
+pub mod code_lab;
 pub mod config;
 pub mod doctor;
 pub mod domain;
