@@ -8,11 +8,16 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use crate::code_lab::app::CodeLabService;
-use crate::code_lab::domain::{AttemptSummary, Difficulty, Exercise, ExerciseProgress};
+use crate::code_lab::app::{CodeLabService, LessonView};
+use crate::code_lab::domain::{
+    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, Difficulty, Exercise,
+    ExerciseProgress, ItemType, QuizResult,
+};
 use crate::code_lab::runners::{self, RunOutcome, RunRequest};
 use crate::config::Config;
-use crate::domain::{ActivityDay, DashboardStats, Document, LearnMode, LearningStatus};
+use crate::domain::{
+    ActivityDay, DashboardStats, Document, LearnMode, LearningStatus, ReviewRating,
+};
 use crate::error::BasicError;
 use crate::infra::catalog;
 use crate::infra::index;
@@ -30,6 +35,8 @@ pub enum Screen {
     Stats,
     CodeLab,
     Exercise,
+    Lesson,
+    ConceptReview,
 }
 
 impl Screen {
@@ -44,6 +51,8 @@ impl Screen {
             Self::Stats => "estadísticas",
             Self::CodeLab => "code lab",
             Self::Exercise => "ejercicio",
+            Self::Lesson => "lección",
+            Self::ConceptReview => "repaso de conceptos",
         }
     }
 }
@@ -92,14 +101,30 @@ pub struct ExerciseWorkspace {
     pub status: String,
 }
 
+/// Espacio de trabajo de una lección con su cuestionario.
+#[derive(Debug)]
+pub struct LessonWorkspace {
+    pub view: LessonView,
+    pub answers: Vec<Option<usize>>,
+    pub question: usize,
+    pub content_scroll: usize,
+    pub result: Option<QuizResult>,
+    pub status: String,
+}
+
 /// Estado de la práctica. El editor vive en la UI; aquí solo está su texto.
 #[derive(Debug)]
 pub struct CodeLabState {
     pub exercises: Vec<Exercise>,
     pub progress: HashMap<i64, ExerciseProgress>,
+    pub stats: CodeLabStats,
+    pub items: Vec<CodeLabItem>,
+    pub concepts: Vec<ConceptReview>,
+    pub concept_index: usize,
     pub difficulty: Difficulty,
     pub selected: usize,
     pub workspace: Option<ExerciseWorkspace>,
+    pub lesson: Option<LessonWorkspace>,
     pub pending_run: bool,
 }
 
@@ -108,9 +133,14 @@ impl Default for CodeLabState {
         Self {
             exercises: Vec::new(),
             progress: HashMap::new(),
+            stats: CodeLabStats::default(),
+            items: Vec::new(),
+            concepts: Vec::new(),
+            concept_index: 0,
             difficulty: Difficulty::Easy,
             selected: 0,
             workspace: None,
+            lesson: None,
             pending_run: false,
         }
     }
@@ -304,7 +334,11 @@ impl App {
             }
             Screen::Dashboard => self.recent.clone(),
             Screen::Pomodoro | Screen::Stats => catalog::list_documents(&self.database, Some(20))?,
-            Screen::Reader | Screen::CodeLab | Screen::Exercise => Vec::new(),
+            Screen::Reader
+            | Screen::CodeLab
+            | Screen::Exercise
+            | Screen::Lesson
+            | Screen::ConceptReview => Vec::new(),
         };
 
         if self.documents.is_empty() {
@@ -332,10 +366,17 @@ impl App {
         self.search_mode = false;
         self.selected = 0;
         self.refresh()?;
-        if screen == Screen::CodeLab {
+        if self.needs_code_lab_refresh() {
             self.refresh_code_lab()?;
         }
         Ok(())
+    }
+
+    fn needs_code_lab_refresh(&self) -> bool {
+        matches!(
+            self.screen,
+            Screen::CodeLab | Screen::Stats | Screen::Review | Screen::ConceptReview
+        ) || (self.screen == Screen::Learn && self.learn_mode == LearnMode::CodeLab)
     }
 
     pub fn back(&mut self) -> Result<(), BasicError> {
@@ -481,13 +522,21 @@ impl App {
     pub fn cycle_learn_mode(&mut self) -> Result<(), BasicError> {
         self.learn_mode = self.learn_mode.next();
         self.selected = 0;
-        self.refresh()
+        self.refresh()?;
+        if self.needs_code_lab_refresh() {
+            self.refresh_code_lab()?;
+        }
+        Ok(())
     }
 
     pub fn set_learn_mode(&mut self, mode: LearnMode) -> Result<(), BasicError> {
         self.learn_mode = mode;
         self.selected = 0;
-        self.refresh()
+        self.refresh()?;
+        if self.needs_code_lab_refresh() {
+            self.refresh_code_lab()?;
+        }
+        Ok(())
     }
 
     /// Califica el documento actual de la cola de repaso.
@@ -519,6 +568,9 @@ impl App {
         let mut service = CodeLabService::new(&mut self.database);
         service.seed()?;
         let all = service.exercises()?;
+        let stats = service.stats()?;
+        let items = service.learning_items()?;
+        let concepts = service.due_concepts()?;
         let mut progress = HashMap::new();
         for exercise in &all {
             progress.insert(exercise.id, service.exercise_progress(exercise.id)?);
@@ -528,6 +580,17 @@ impl App {
             .filter(|exercise| exercise.difficulty == self.code_lab.difficulty)
             .collect();
         self.code_lab.progress = progress;
+        self.code_lab.stats = stats;
+        self.code_lab.items = items;
+        self.code_lab.concepts = concepts;
+        if self.code_lab.concepts.is_empty() {
+            self.code_lab.concept_index = 0;
+        } else {
+            self.code_lab.concept_index = self
+                .code_lab
+                .concept_index
+                .min(self.code_lab.concepts.len() - 1);
+        }
         if self.code_lab.exercises.is_empty() {
             self.code_lab.selected = 0;
         } else {
@@ -700,6 +763,154 @@ impl App {
         let id = workspace.exercise.id;
         let solution = CodeLabService::new(&mut self.database).solution(id)?;
         workspace.solution = solution;
+        Ok(())
+    }
+
+    pub fn open_concept_review_screen(&mut self) -> Result<(), BasicError> {
+        self.set_screen(Screen::ConceptReview)
+    }
+
+    pub fn move_concept_selection(&mut self, delta: isize) {
+        if self.code_lab.concepts.is_empty() {
+            return;
+        }
+        let len = self.code_lab.concepts.len() as isize;
+        self.code_lab.concept_index =
+            (self.code_lab.concept_index as isize + delta).rem_euclid(len) as usize;
+    }
+
+    /// Califica el concepto actual y lo saca de la cola de repaso.
+    pub fn rate_current_concept(&mut self, rating: ReviewRating) -> Result<(), BasicError> {
+        let Some(concept) = self
+            .code_lab
+            .concepts
+            .get(self.code_lab.concept_index)
+            .cloned()
+        else {
+            self.status = "No hay conceptos pendientes.".to_string();
+            return Ok(());
+        };
+        let index = self.code_lab.concept_index;
+        let outcome = CodeLabService::new(&mut self.database).rate_concept(concept.id, rating)?;
+        self.code_lab.concepts.remove(index);
+        if index >= self.code_lab.concepts.len() && !self.code_lab.concepts.is_empty() {
+            self.code_lab.concept_index = self.code_lab.concepts.len() - 1;
+        }
+        self.code_lab.stats = CodeLabService::new(&mut self.database).stats()?;
+        self.status = format!(
+            "{}: próximo repaso en {} días.",
+            concept.concept, outcome.due_in_days
+        );
+        Ok(())
+    }
+
+    pub fn move_learning_selection(&mut self, delta: isize) {
+        if self.code_lab.items.is_empty() {
+            return;
+        }
+        let len = self.code_lab.items.len() as isize;
+        self.selected = (self.selected as isize + delta).rem_euclid(len) as usize;
+    }
+
+    /// Abre el elemento seleccionado en Learning Mode.
+    pub fn open_learning_item(&mut self) -> Result<(), BasicError> {
+        let Some(item) = self.code_lab.items.get(self.selected).cloned() else {
+            self.status = "No hay elementos de Code Lab pendientes.".to_string();
+            return Ok(());
+        };
+        match item.kind {
+            ItemType::Exercise => self.open_exercise(item.id),
+            ItemType::Lesson => self.open_lesson(item.id),
+        }
+    }
+
+    pub fn open_lesson(&mut self, lesson_id: i64) -> Result<(), BasicError> {
+        let view = {
+            let mut service = CodeLabService::new(&mut self.database);
+            let Some(view) = service.lesson_view(lesson_id)? else {
+                self.status = "La lección ya no existe.".to_string();
+                return Ok(());
+            };
+            service.open_lesson(lesson_id)?;
+            view
+        };
+        let answers = vec![None; view.detail.questions.len()];
+        let title = view.detail.lesson.title.clone();
+        self.code_lab.lesson = Some(LessonWorkspace {
+            view,
+            answers,
+            question: 0,
+            content_scroll: 0,
+            result: None,
+            status: "Responde las preguntas y pulsa Enter para enviar.".to_string(),
+        });
+        if self.screen != Screen::Lesson {
+            self.previous.push(self.screen);
+        }
+        self.screen = Screen::Lesson;
+        self.status = format!("Lección abierta: {title}");
+        Ok(())
+    }
+
+    pub fn move_lesson_question(&mut self, delta: isize) {
+        let Some(lesson) = &mut self.code_lab.lesson else {
+            return;
+        };
+        if lesson.view.detail.questions.is_empty() {
+            return;
+        }
+        let len = lesson.view.detail.questions.len() as isize;
+        lesson.question = (lesson.question as isize + delta).rem_euclid(len) as usize;
+    }
+
+    pub fn select_lesson_answer(&mut self, answer: usize) {
+        let Some(lesson) = &mut self.code_lab.lesson else {
+            return;
+        };
+        if lesson
+            .view
+            .detail
+            .questions
+            .get(lesson.question)
+            .is_some_and(|question| answer < question.options.len())
+        {
+            lesson.answers[lesson.question] = Some(answer);
+        }
+    }
+
+    pub fn scroll_lesson_content(&mut self, delta: isize) {
+        if let Some(lesson) = &mut self.code_lab.lesson {
+            lesson.content_scroll = (lesson.content_scroll as isize + delta).max(0) as usize;
+        }
+    }
+
+    pub fn submit_lesson_quiz(&mut self) -> Result<(), BasicError> {
+        let Some(lesson) = &self.code_lab.lesson else {
+            return Ok(());
+        };
+        let lesson_id = lesson.view.detail.lesson.id;
+        let answers = lesson.answers.clone();
+        let result = CodeLabService::new(&mut self.database).submit_quiz(lesson_id, &answers)?;
+        let passed = result.perfect();
+        let correct = result.correct;
+        let total = result.total;
+        if let Some(lesson) = &mut self.code_lab.lesson {
+            lesson.result = Some(result);
+            lesson.status = format!(
+                "Cuestionario: {correct}/{total} · {}",
+                if passed {
+                    "lección completada"
+                } else {
+                    "repasa las respuestas falladas"
+                }
+            );
+        }
+        self.refresh_code_lab()?;
+        self.status = if passed {
+            "Lección completada.".to_string()
+        } else {
+            "Cuestionario registrado; la lección necesita repaso.".to_string()
+        };
         Ok(())
     }
 
@@ -1125,5 +1336,117 @@ mod tests {
                 .as_deref(),
             Some("solución propia")
         );
+    }
+
+    #[test]
+    fn lesson_quiz_completes_only_when_every_answer_is_right() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        let lesson_id = {
+            let mut service = CodeLabService::new(&mut app.database);
+            service.seed().unwrap();
+            service.lessons().unwrap()[0].id
+        };
+        app.open_lesson(lesson_id).unwrap();
+        assert_eq!(app.screen, Screen::Lesson);
+        let progress = CodeLabService::new(&mut app.database)
+            .lesson_view(lesson_id)
+            .unwrap()
+            .unwrap()
+            .progress;
+        assert_ne!(
+            progress.status,
+            crate::code_lab::domain::LessonStatus::Completed
+        );
+
+        let correct: Vec<usize> = app
+            .code_lab
+            .lesson
+            .as_ref()
+            .unwrap()
+            .view
+            .detail
+            .questions
+            .iter()
+            .map(|question| question.correct_index)
+            .collect();
+        for (index, answer) in correct.iter().enumerate() {
+            app.code_lab.lesson.as_mut().unwrap().question = index;
+            app.select_lesson_answer(*answer);
+        }
+        app.submit_lesson_quiz().unwrap();
+        assert!(
+            app.code_lab
+                .lesson
+                .as_ref()
+                .unwrap()
+                .result
+                .as_ref()
+                .unwrap()
+                .perfect()
+        );
+        let progress = CodeLabService::new(&mut app.database)
+            .lesson_view(lesson_id)
+            .unwrap()
+            .unwrap()
+            .progress;
+        assert_eq!(
+            progress.status,
+            crate::code_lab::domain::LessonStatus::Completed
+        );
+        assert!(progress.completed_at.is_some());
+    }
+
+    #[test]
+    fn learning_mode_shows_pending_items_and_opens_them() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        app.refresh_code_lab().unwrap();
+        let exercise_id = app.code_lab.exercises[0].id;
+        app.apply_outcome(
+            exercise_id,
+            "código",
+            RunOutcome {
+                status: crate::code_lab::domain::AttemptStatus::Failed,
+                sdk_version: None,
+                compile_ok: Some(true),
+                tests_passed: 1,
+                tests_total: 4,
+                duration_ms: 100,
+                executions: Vec::new(),
+                cases: Vec::new(),
+            },
+        )
+        .unwrap();
+        app.set_learn_mode(LearnMode::CodeLab).unwrap();
+        assert!(app.code_lab.items.iter().any(|item| item.id == exercise_id));
+        app.selected = app
+            .code_lab
+            .items
+            .iter()
+            .position(|item| item.id == exercise_id)
+            .unwrap();
+        app.open_learning_item().unwrap();
+        assert_eq!(app.screen, Screen::Exercise);
+    }
+
+    #[test]
+    fn rating_a_concept_advances_the_review_queue() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        app.open_concept_review_screen().unwrap();
+        let total = app.code_lab.concepts.len();
+        assert!(total > 0);
+        let due_before = app.code_lab.stats.concepts_due;
+        let first = app.code_lab.concepts[0].concept.clone();
+        app.rate_current_concept(ReviewRating::Good).unwrap();
+        assert_eq!(app.code_lab.concepts.len(), total - 1);
+        assert!(
+            !app.code_lab
+                .concepts
+                .iter()
+                .any(|item| item.concept == first)
+        );
+        assert_eq!(app.code_lab.stats.concepts_due, due_before - 1);
     }
 }

@@ -23,7 +23,7 @@ use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, 
 use ratatui::{Frame, Terminal};
 
 use crate::app::{App, ExerciseWorkspace, Screen, format_clock};
-use crate::code_lab::domain::{Difficulty, ExerciseStatus};
+use crate::code_lab::domain::{Difficulty, ExerciseStatus, ItemType};
 use crate::code_lab::ui::editor::CodeEditor;
 use crate::config::Config;
 use crate::domain::{
@@ -264,6 +264,38 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
         return Ok(());
     }
 
+    if app.screen == Screen::Lesson {
+        match key.code {
+            KeyCode::Char(character @ '1'..='4') => {
+                app.select_lesson_answer(character as usize - '1' as usize);
+            }
+            KeyCode::Char('j') | KeyCode::Down => app.move_lesson_question(1),
+            KeyCode::Char('k') | KeyCode::Up => app.move_lesson_question(-1),
+            KeyCode::PageDown => app.scroll_lesson_content(6),
+            KeyCode::PageUp => app.scroll_lesson_content(-6),
+            KeyCode::Enter => app.submit_lesson_quiz()?,
+            KeyCode::Esc => app.back()?,
+            _ => {}
+        }
+        return Ok(());
+    }
+
+    if app.screen == Screen::ConceptReview {
+        if let KeyCode::Char(character) = key.code
+            && let Some(rating) = ReviewRating::from_key(character)
+        {
+            app.rate_current_concept(rating)?;
+            return Ok(());
+        }
+        match key.code {
+            KeyCode::Char('j') | KeyCode::Down => app.move_concept_selection(1),
+            KeyCode::Char('k') | KeyCode::Up => app.move_concept_selection(-1),
+            KeyCode::Esc => app.back()?,
+            _ => {}
+        }
+        return Ok(());
+    }
+
     // Los dígitos son contextuales en Learn, Review y Code Lab.
     if app.screen == Screen::CodeLab
         && let KeyCode::Char(character @ '1'..='3') = key.code
@@ -273,7 +305,7 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
         return Ok(());
     }
     if app.screen == Screen::Learn
-        && let KeyCode::Char(character @ '1'..='5') = key.code
+        && let KeyCode::Char(character @ '1'..='6') = key.code
     {
         let index = character as usize - '1' as usize;
         app.set_learn_mode(LearnMode::ALL[index])?;
@@ -298,6 +330,7 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
         KeyCode::Char('5') => app.set_screen(Screen::Pomodoro)?,
         KeyCode::Char('6') => app.set_screen(Screen::Stats)?,
         KeyCode::Char('7') => app.open_code_lab_screen()?,
+        KeyCode::Char('8') => app.open_concept_review_screen()?,
         KeyCode::Tab => {
             let next = match app.screen {
                 Screen::Dashboard => Screen::Explore,
@@ -307,7 +340,9 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
                 Screen::Pomodoro => Screen::Stats,
                 Screen::Stats => Screen::CodeLab,
                 Screen::CodeLab => Screen::Dashboard,
-                Screen::Reader | Screen::Exercise => Screen::Dashboard,
+                Screen::Reader | Screen::Exercise | Screen::Lesson | Screen::ConceptReview => {
+                    Screen::Dashboard
+                }
             };
             if next == Screen::CodeLab {
                 app.open_code_lab_screen()?;
@@ -320,6 +355,8 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
                 app.reader_scroll(1);
             } else if app.screen == Screen::CodeLab {
                 app.move_exercise_selection(1);
+            } else if app.screen == Screen::Learn && app.learn_mode == LearnMode::CodeLab {
+                app.move_learning_selection(1);
             } else {
                 app.move_selection(1);
             }
@@ -329,6 +366,8 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
                 app.reader_scroll(-1);
             } else if app.screen == Screen::CodeLab {
                 app.move_exercise_selection(-1);
+            } else if app.screen == Screen::Learn && app.learn_mode == LearnMode::CodeLab {
+                app.move_learning_selection(-1);
             } else {
                 app.move_selection(-1);
             }
@@ -350,6 +389,10 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
             } else if app.screen == Screen::CodeLab {
                 if !app.code_lab.exercises.is_empty() {
                     app.code_lab.selected = app.code_lab.exercises.len() - 1;
+                }
+            } else if app.screen == Screen::Learn && app.learn_mode == LearnMode::CodeLab {
+                if !app.code_lab.items.is_empty() {
+                    app.selected = app.code_lab.items.len() - 1;
                 }
             } else if !app.documents.is_empty() {
                 app.selected = app.documents.len() - 1;
@@ -374,6 +417,8 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
         KeyCode::Enter => {
             if app.screen == Screen::CodeLab {
                 app.open_selected_exercise()?;
+            } else if app.screen == Screen::Learn && app.learn_mode == LearnMode::CodeLab {
+                app.open_learning_item()?;
             } else if matches!(
                 app.screen,
                 Screen::Explore | Screen::Learn | Screen::Dashboard
@@ -464,6 +509,8 @@ fn draw(frame: &mut Frame, app: &App, ui: &UiState) {
         Screen::Stats => draw_stats(frame, layout[1], app, &theme),
         Screen::CodeLab => draw_code_lab(frame, layout[1], app, &theme),
         Screen::Exercise => draw_exercise(frame, layout[1], app, ui, &theme),
+        Screen::Lesson => draw_lesson(frame, layout[1], app, &theme),
+        Screen::ConceptReview => draw_concept_review(frame, layout[1], app, &theme),
     }
     draw_footer(frame, layout[2], app, &theme);
 
@@ -540,17 +587,19 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
 fn draw_footer(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
     let hints = match app.screen {
         Screen::Dashboard | Screen::Explore => {
-            "j/k mover · Enter abrir · / buscar · n nueva · i indexar · 1-7 pantallas · q salir"
+            "j/k mover · Enter abrir · / buscar · n nueva · i indexar · 1-8 pantallas · q salir"
         }
         Screen::Reader => {
             "j/k desplazar · s estado · f favorito · e editar · p pomodoro · Esc volver · q salir"
         }
         Screen::Learn => "1-5 modo · j/k mover · Enter abrir · / buscar · i indexar · Esc volver",
         Screen::Review => "1-4 calificar · j/k mover · Enter abrir · Esc volver",
-        Screen::Pomodoro => "Espacio iniciar/pausar · x reiniciar · > saltar · 1-7 pantallas",
-        Screen::Stats => "j/k mover · i indexar · 1-7 pantallas · q salir",
+        Screen::Pomodoro => "Espacio iniciar/pausar · x reiniciar · > saltar · 1-8 pantallas",
+        Screen::Stats => "j/k mover · i indexar · 1-8 pantallas · q salir",
         Screen::CodeLab => "1-3 dificultad · j/k elegir · Enter abrir · Esc volver · q salir",
         Screen::Exercise => "Ctrl+S guardar · Ctrl+Enter ejecutar · Ctrl+V solución · Esc volver",
+        Screen::Lesson => "1-4 responder · j/k preguntas · Enter enviar · Esc volver",
+        Screen::ConceptReview => "1-4 calificar · j/k mover · Esc volver",
     };
     frame.render_widget(
         Paragraph::new(Line::from(vec![
@@ -742,6 +791,11 @@ fn draw_learn(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         rows[0],
     );
 
+    if app.learn_mode == LearnMode::CodeLab {
+        code_lab_item_list(frame, rows[1], app, theme);
+        return;
+    }
+
     if area.width >= 100 {
         let columns = Layout::default()
             .direction(Direction::Horizontal)
@@ -883,12 +937,30 @@ fn draw_pomodoro(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
 }
 
 fn draw_stats(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
-    let columns = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(68), Constraint::Percentage(32)])
-        .split(area);
+    let (heatmap_area, summary_area, lab_area) = if area.width >= 100 {
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(68), Constraint::Percentage(32)])
+            .split(area);
+        let left = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(8), Constraint::Length(8)])
+            .split(columns[0]);
+        (left[0], columns[1], left[1])
+    } else {
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(8),
+                Constraint::Length(10),
+                Constraint::Length(8),
+            ])
+            .split(area);
+        (rows[0], rows[1], rows[2])
+    };
 
-    draw_heatmap(frame, columns[0], app, theme);
+    draw_heatmap(frame, heatmap_area, app, theme);
+    draw_code_lab_stats(frame, lab_area, app, theme);
 
     let lines = vec![
         Line::from(vec![
@@ -949,7 +1021,54 @@ fn draw_stats(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         Paragraph::new(lines)
             .style(theme.base())
             .block(theme.block("resumen")),
-        columns[1],
+        summary_area,
+    );
+}
+
+fn draw_code_lab_stats(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
+    let stats = &app.code_lab.stats;
+    let lines = vec![
+        Line::from(vec![
+            Span::styled("lecciones     ", Style::default().fg(theme.muted)),
+            Span::styled(
+                format!("{}/{}", stats.lessons_completed, stats.lessons),
+                Style::default().fg(theme.accent),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("ejercicios    ", Style::default().fg(theme.muted)),
+            Span::styled(
+                format!("{}/{}", stats.exercises_solved, stats.exercises),
+                Style::default().fg(theme.success),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("intentos      ", Style::default().fg(theme.muted)),
+            Span::styled(
+                format!("{}/{}", stats.attempts_passed, stats.attempts),
+                Style::default().fg(theme.text),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("conceptos     ", Style::default().fg(theme.muted)),
+            Span::styled(
+                stats.concepts_due.to_string(),
+                Style::default().fg(theme.warning),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("tiempo lab    ", Style::default().fg(theme.muted)),
+            Span::styled(
+                format_duration(stats.seconds_spent),
+                Style::default().fg(theme.link),
+            ),
+        ]),
+    ];
+    frame.render_widget(
+        Paragraph::new(lines)
+            .style(theme.base())
+            .block(theme.block("code lab")),
+        area,
     );
 }
 
@@ -1125,6 +1244,240 @@ fn draw_code_lab(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
     let mut state = ListState::default();
     state.select(Some(app.code_lab.selected));
     frame.render_stateful_widget(list, rows[1], &mut state);
+}
+
+fn code_lab_item_list(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
+    if app.code_lab.items.is_empty() {
+        frame.render_widget(
+            Paragraph::new(
+                "No hay lecciones ni ejercicios pendientes. Abre una lección o intenta un ejercicio.",
+            )
+            .alignment(Alignment::Center)
+            .style(theme.base())
+            .block(theme.block("code lab")),
+            area,
+        );
+        return;
+    }
+    let items = app
+        .code_lab
+        .items
+        .iter()
+        .map(|item| {
+            let kind = match item.kind {
+                ItemType::Lesson => "lección",
+                ItemType::Exercise => "ejercicio",
+            };
+            let color = if item.status.contains("repasar") {
+                theme.warning
+            } else {
+                theme.accent
+            };
+            ListItem::new(Line::from(vec![
+                Span::styled(format!(" {kind:<9} "), Style::default().fg(theme.muted)),
+                Span::styled(truncate(&item.title, 34), Style::default().fg(theme.text)),
+                Span::styled(
+                    format!(" · {}", truncate(&item.subtitle, 22)),
+                    Style::default().fg(theme.muted),
+                ),
+                Span::styled(format!(" · {}", item.status), Style::default().fg(color)),
+            ]))
+        })
+        .collect::<Vec<_>>();
+    let list = List::new(items)
+        .block(theme.block("pendientes de Code Lab"))
+        .highlight_style(
+            Style::default()
+                .bg(theme.selection)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("▌ ");
+    let mut state = ListState::default();
+    state.select(Some(app.selected.min(app.code_lab.items.len() - 1)));
+    frame.render_stateful_widget(list, area, &mut state);
+}
+
+fn draw_concept_review(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
+    let Some(concept) = app.code_lab.concepts.get(app.code_lab.concept_index) else {
+        frame.render_widget(
+            Paragraph::new(
+                "No hay conceptos pendientes. Las lecciones y ejercicios los programan.",
+            )
+            .alignment(Alignment::Center)
+            .style(theme.base())
+            .block(theme.block("repaso de conceptos")),
+            area,
+        );
+        return;
+    };
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(5), Constraint::Min(3)])
+        .split(area);
+    let header = vec![
+        Line::from(vec![
+            Span::styled(
+                concept.concept.clone(),
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" · {}", concept.language),
+                Style::default().fg(theme.muted),
+            ),
+        ]),
+        Line::from(Span::styled(
+            format!(
+                "nivel {} · intervalo {} días · facilidad {:.2} · fallos {}",
+                concept.level, concept.interval_days, concept.ease_factor, concept.lapses
+            ),
+            Style::default().fg(theme.muted),
+        )),
+        Line::from(Span::styled(
+            concept
+                .due_at
+                .map(crate::infra::catalog::format_date)
+                .unwrap_or_else(|| "pendiente desde el inicio".to_string()),
+            Style::default().fg(theme.warning),
+        )),
+    ];
+    frame.render_widget(
+        Paragraph::new(header)
+            .style(theme.base())
+            .block(theme.block("concepto actual")),
+        rows[0],
+    );
+
+    let items = app
+        .code_lab
+        .concepts
+        .iter()
+        .map(|item| ListItem::new(Line::from(item.concept.clone())))
+        .collect::<Vec<_>>();
+    let list = List::new(items)
+        .block(theme.block("cola de repaso"))
+        .highlight_style(
+            Style::default()
+                .bg(theme.selection)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("▌ ");
+    let mut state = ListState::default();
+    state.select(Some(app.code_lab.concept_index));
+    frame.render_stateful_widget(list, rows[1], &mut state);
+}
+
+fn draw_lesson(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
+    let Some(lesson) = &app.code_lab.lesson else {
+        frame.render_widget(
+            Paragraph::new("No hay una lección abierta. Pulsa Esc para volver.")
+                .alignment(Alignment::Center)
+                .style(theme.base())
+                .block(theme.block("lección")),
+            area,
+        );
+        return;
+    };
+
+    let content: Vec<Line<'static>> = lesson
+        .view
+        .detail
+        .lesson
+        .content_md
+        .lines()
+        .skip(lesson.content_scroll)
+        .take(80)
+        .map(|line| {
+            let style = if line.starts_with('#') {
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(theme.text)
+            };
+            Line::from(Span::styled(truncate(line, 90), style))
+        })
+        .collect();
+
+    if area.width >= 100 {
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+        frame.render_widget(
+            Paragraph::new(content)
+                .wrap(Wrap { trim: false })
+                .style(theme.base())
+                .block(theme.block(&format!("lección · {}", lesson.view.detail.lesson.title))),
+            columns[0],
+        );
+        draw_quiz(frame, columns[1], lesson, theme);
+    } else {
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+        frame.render_widget(
+            Paragraph::new(content)
+                .wrap(Wrap { trim: false })
+                .style(theme.base())
+                .block(theme.block("contenido")),
+            rows[0],
+        );
+        draw_quiz(frame, rows[1], lesson, theme);
+    }
+}
+
+fn draw_quiz(frame: &mut Frame, area: Rect, lesson: &crate::app::LessonWorkspace, theme: &Theme) {
+    let mut lines = Vec::new();
+    lines.push(Line::from(Span::styled(
+        truncate(&lesson.status, 60),
+        Style::default().fg(theme.warning),
+    )));
+    for (index, question) in lesson.view.detail.questions.iter().enumerate() {
+        let active = index == lesson.question;
+        let marker = if active { "▌ " } else { "  " };
+        lines.push(Line::from(vec![
+            Span::styled(marker, Style::default().fg(theme.accent)),
+            Span::styled(
+                truncate(&format!("{}. {}", index + 1, question.prompt), 60),
+                Style::default().fg(if active { theme.accent } else { theme.text }),
+            ),
+        ]));
+        for (option_index, option) in question.options.iter().enumerate() {
+            let selected = lesson.answers[index] == Some(option_index);
+            let verdict = lesson
+                .result
+                .as_ref()
+                .and_then(|result| result.answers.get(index));
+            let color = match verdict {
+                Some(answer) if option_index == answer.correct_index => theme.success,
+                Some(answer) if selected && !answer.correct => theme.error,
+                _ => theme.muted,
+            };
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("   {} ", if selected { "●" } else { "○" }),
+                    Style::default().fg(color),
+                ),
+                Span::styled(
+                    truncate(&format!("{} {}", option_index + 1, option), 56),
+                    Style::default().fg(if selected { theme.text } else { theme.muted }),
+                ),
+            ]));
+        }
+    }
+    if lesson.view.detail.questions.is_empty() {
+        lines.push(Line::from("Esta lección no tiene cuestionario."));
+    }
+    frame.render_widget(
+        Paragraph::new(lines)
+            .wrap(Wrap { trim: false })
+            .style(theme.base())
+            .block(theme.block("cuestionario · Enter envía")),
+        area,
+    );
 }
 
 fn draw_exercise(frame: &mut Frame, area: Rect, app: &App, ui: &UiState, theme: &Theme) {
@@ -1504,7 +1857,7 @@ fn draw_prompt(frame: &mut Frame, area: Rect, prompt: &crate::app::Prompt, theme
 }
 
 fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
-    let popup = centered_rect(area.width.saturating_sub(16).min(90), 28, area);
+    let popup = centered_rect(area.width.saturating_sub(16).min(90), 34, area);
     frame.render_widget(Clear, popup);
     let lines = vec![
         Line::from(Span::styled(
@@ -1513,7 +1866,7 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from("  1-7        cambiar de pantalla"),
+        Line::from("  1-8        cambiar de pantalla"),
         Line::from("  Tab        siguiente pantalla"),
         Line::from("  j/k        mover o desplazar"),
         Line::from("  Enter      abrir documento"),
@@ -1533,6 +1886,7 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
         Line::from("  f          favorito"),
         Line::from("  e          abrir en el editor externo"),
         Line::from("  p          pomodoro"),
+        Line::from("  1-6        modos de Learning Mode"),
         Line::from("  1-4        calificar repaso"),
         Line::from(""),
         Line::from(Span::styled(
@@ -1547,6 +1901,9 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
         Line::from("  Ctrl+S     guardar borrador"),
         Line::from("  Ctrl+Enter ejecutar casos de prueba"),
         Line::from("  Ctrl+V     mostrar u ocultar solución"),
+        Line::from("  1-4        responder en una lección"),
+        Line::from("  Enter      enviar el cuestionario"),
+        Line::from("  8          repasar conceptos"),
         Line::from(""),
         Line::from(Span::styled(
             "  ? o Esc para cerrar la ayuda",
@@ -1736,5 +2093,68 @@ mod tests {
             .unwrap();
         assert!(draft.starts_with('x'));
         assert!(!ui.editor.as_ref().unwrap().dirty());
+    }
+
+    #[test]
+    fn learning_mode_code_lab_lists_pending_items() {
+        let (_temp, mut app) = fixture();
+        app.refresh_code_lab().unwrap();
+        app.set_learn_mode(LearnMode::CodeLab).unwrap();
+        let lesson_id = crate::code_lab::app::CodeLabService::new(&mut app.database)
+            .lessons()
+            .unwrap()[0]
+            .id;
+        app.open_lesson(lesson_id).unwrap();
+        app.set_screen(Screen::Learn).unwrap();
+        app.set_learn_mode(LearnMode::CodeLab).unwrap();
+        assert!(!app.code_lab.items.is_empty());
+
+        let ui = UiState::default();
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("pendientes de Code Lab"));
+        assert!(rendered.contains("code lab"));
+    }
+
+    #[test]
+    fn lesson_screen_renders_the_quiz() {
+        let (_temp, mut app) = fixture();
+        app.refresh_code_lab().unwrap();
+        let lesson_id = crate::code_lab::app::CodeLabService::new(&mut app.database)
+            .lessons()
+            .unwrap()[0]
+            .id;
+        app.open_lesson(lesson_id).unwrap();
+        let prompt = app.code_lab.lesson.as_ref().unwrap().view.detail.questions[0]
+            .prompt
+            .clone();
+        let ui = UiState::default();
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("cuestionario"));
+        assert!(rendered.contains(&truncate(&prompt, 60)));
+    }
+
+    #[test]
+    fn concept_review_screen_accepts_a_rating() {
+        let (_temp, mut app) = fixture();
+        app.open_concept_review_screen().unwrap();
+        let first = app.code_lab.concepts[0].concept.clone();
+        let mut ui = UiState::default();
+        let rendered = render(110, 32, &app, &ui);
+        assert!(rendered.contains("repaso de conceptos"));
+        assert!(rendered.contains(&first));
+
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('1'), KeyModifiers::empty()),
+        )
+        .unwrap();
+        assert!(
+            !app.code_lab
+                .concepts
+                .iter()
+                .any(|item| item.concept == first)
+        );
+        assert!(app.status.contains("próximo repaso"));
     }
 }

@@ -129,15 +129,17 @@ pub enum LearnMode {
     Pending,
     Review,
     Random,
+    CodeLab,
 }
 
 impl LearnMode {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Continue,
         Self::Explore,
         Self::Pending,
         Self::Review,
         Self::Random,
+        Self::CodeLab,
     ];
 
     pub fn label(self) -> &'static str {
@@ -147,6 +149,7 @@ impl LearnMode {
             Self::Pending => "pendientes",
             Self::Review => "repasar",
             Self::Random => "aleatorio",
+            Self::CodeLab => "code lab",
         }
     }
 
@@ -156,7 +159,8 @@ impl LearnMode {
             Self::Explore => Self::Pending,
             Self::Pending => Self::Review,
             Self::Review => Self::Random,
-            Self::Random => Self::Continue,
+            Self::Random => Self::CodeLab,
+            Self::CodeLab => Self::Continue,
         }
     }
 }

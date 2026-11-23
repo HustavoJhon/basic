@@ -317,6 +317,8 @@ pub fn learn_documents(database: &Database, mode: LearnMode) -> Result<Vec<Docum
             "ls.review_due_at, d.title",
         ),
         LearnMode::Random => ("d.missing_at IS NULL AND d.is_stub = 0", "d.title"),
+        // Code Lab tiene su propia cola; la TUI no usa documentos aquí.
+        LearnMode::CodeLab => ("0", "d.title"),
     };
     let sql = format!("{DOCUMENT_SELECT} WHERE {where_clause} ORDER BY {order}");
     let mut statement = database.connection().prepare(&sql)?;
