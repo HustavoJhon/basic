@@ -10,8 +10,8 @@ use std::time::Instant;
 
 use crate::code_lab::app::{CodeLabService, LessonView};
 use crate::code_lab::domain::{
-    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, Difficulty, Exercise,
-    ExerciseProgress, ItemType, QuizResult,
+    AttemptSummary, CodeLabItem, CodeLabStats, ConceptReview, DEFAULT_LANGUAGE, Difficulty,
+    Exercise, ExerciseProgress, ItemType, NoteItemType, NoteLink, QuizResult,
 };
 use crate::code_lab::runners::{self, RunOutcome, RunRequest};
 use crate::config::Config;
@@ -177,9 +177,20 @@ impl Pomodoro {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Datos necesarios para crear una nota enlazada con un elemento de Code Lab.
+#[derive(Debug, Clone)]
+pub struct CodeLabNoteDraft {
+    pub item_type: NoteItemType,
+    pub item_id: i64,
+    pub title: String,
+    pub body: String,
+    pub default_path: String,
+}
+
+#[derive(Debug, Clone)]
 pub enum PromptKind {
     NewNote,
+    CodeLabNote(CodeLabNoteDraft),
 }
 
 #[derive(Debug)]
@@ -922,6 +933,122 @@ impl App {
         });
     }
 
+    /// Crea una nota enlazada con un elemento de Code Lab, o abre la que ya
+    /// existe. Nunca sobrescribe archivos del vault.
+    pub fn start_code_lab_note_prompt(
+        &mut self,
+        item_type: NoteItemType,
+        item_id: i64,
+    ) -> Result<(), BasicError> {
+        if let Some(link) = CodeLabService::new(&mut self.database).note_link(item_type, item_id)? {
+            let indexed = catalog::document_by_path(&self.database, &link.note_path)?
+                .map(|document| document.id);
+            if let Some(id) = indexed {
+                self.open_document(id)?;
+            } else {
+                self.status = format!("Nota enlazada, aún sin indexar: {}", link.note_path);
+            }
+            return Ok(());
+        }
+
+        let draft = self.code_lab_note_draft(item_type, item_id)?;
+        self.prompt = Some(Prompt {
+            kind: PromptKind::CodeLabNote(draft.clone()),
+            title: "Nota de Code Lab (ruta relativa, Enter para crear)",
+            input: draft.default_path,
+        });
+        Ok(())
+    }
+
+    /// Ruta de la nota enlazada, para mostrarla en la cabecera.
+    pub fn linked_note_path(
+        &self,
+        item_type: NoteItemType,
+        item_id: i64,
+    ) -> Result<Option<String>, BasicError> {
+        Ok(
+            crate::code_lab::infra::note_link(
+                &self.database,
+                DEFAULT_LANGUAGE,
+                item_type,
+                item_id,
+            )?
+            .map(|link| link.note_path),
+        )
+    }
+
+    fn code_lab_note_draft(
+        &mut self,
+        item_type: NoteItemType,
+        item_id: i64,
+    ) -> Result<CodeLabNoteDraft, BasicError> {
+        let service = CodeLabService::new(&mut self.database);
+        let (title, body, default_path) = match item_type {
+            NoteItemType::Lesson => {
+                let view = service
+                    .lesson_view(item_id)?
+                    .ok_or_else(|| note_target_error("lección", item_id))?;
+                let lesson = &view.detail.lesson;
+                let body = format!(
+                    "> Lección de {} · {}\n\n{}\n\n## Conceptos\n\n{}\n\n## Contenido de la lección\n\n{}\n",
+                    DEFAULT_LANGUAGE,
+                    lesson.display(),
+                    lesson.summary,
+                    bullet_list(&lesson.concepts),
+                    lesson.content_md
+                );
+                (
+                    lesson.title.clone(),
+                    body,
+                    format!("code-lab/{}/{}.md", DEFAULT_LANGUAGE, lesson.slug),
+                )
+            }
+            NoteItemType::Exercise => {
+                let exercise = service
+                    .exercise_detail(item_id)?
+                    .ok_or_else(|| note_target_error("ejercicio", item_id))?;
+                let body = format!(
+                    "> Ejercicio de {} · nivel {}\n\n{}\n\n## Conceptos\n\n{}\n\n## Pistas\n\n{}\n\n## Código inicial\n\n```csharp\n{}\n```\n",
+                    DEFAULT_LANGUAGE,
+                    exercise.level,
+                    exercise.description_md,
+                    bullet_list(&exercise.concepts),
+                    bullet_list(&exercise.hints),
+                    exercise.starter_code
+                );
+                (
+                    exercise.title.clone(),
+                    body,
+                    format!(
+                        "code-lab/{}/ejercicio-{}.md",
+                        DEFAULT_LANGUAGE, exercise.slug
+                    ),
+                )
+            }
+            NoteItemType::Concept => {
+                let concept = service
+                    .concept(item_id)?
+                    .ok_or_else(|| note_target_error("concepto", item_id))?;
+                let body = format!(
+                    "> Concepto de {} · nivel {} · repasado {} vez/veces\n\nEste concepto aparece en lecciones y ejercicios. Añade aquí tus propias notas y ejemplos.\n",
+                    concept.language, concept.level, concept.lapses
+                );
+                (
+                    concept.concept.clone(),
+                    body,
+                    format!("code-lab/{}/concepto-{}.md", concept.language, concept.id),
+                )
+            }
+        };
+        Ok(CodeLabNoteDraft {
+            item_type,
+            item_id,
+            title,
+            body,
+            default_path,
+        })
+    }
+
     pub fn prompt_push(&mut self, character: char) {
         if let Some(prompt) = &mut self.prompt {
             prompt.input.push(character);
@@ -957,6 +1084,32 @@ impl App {
                     )
                     .ok();
                 if let Some(id) = id {
+                    self.open_document(id)?;
+                } else {
+                    self.refresh()?;
+                }
+            }
+            PromptKind::CodeLabNote(draft) => {
+                let relative = notes::normalize_note_path(&prompt.input)?;
+                let body = notes::render_note_body(&self.config, &draft.title, &draft.body);
+                let created = notes::create_note_with_body(&self.config, &relative, &body)?;
+                let report = index::index_vault(&mut self.database, &self.config)?;
+                let document_id = catalog::document_by_path(&self.database, &created.relative)?
+                    .map(|document| document.id);
+                let link = NoteLink {
+                    language: DEFAULT_LANGUAGE.to_string(),
+                    item_type: draft.item_type,
+                    item_id: draft.item_id,
+                    note_path: created.relative.clone(),
+                    document_id,
+                };
+                CodeLabService::new(&mut self.database).save_note_link(&link)?;
+                self.status = format!(
+                    "Nota de Code Lab creada: {} · {}",
+                    created.relative,
+                    report.summary()
+                );
+                if let Some(id) = document_id {
                     self.open_document(id)?;
                 } else {
                     self.refresh()?;
@@ -1112,6 +1265,24 @@ pub fn phase_seconds(config: &Config, phase: PomodoroPhase) -> i64 {
         PomodoroPhase::LongBreak => config.pomodoro.long_break_minutes,
     };
     minutes as i64 * 60
+}
+
+fn note_target_error(kind: &str, id: i64) -> BasicError {
+    BasicError::InvalidConfig {
+        path: "code-lab/notes".into(),
+        message: format!("{kind} {id} no encontrado"),
+    }
+}
+
+fn bullet_list(items: &[String]) -> String {
+    if items.is_empty() {
+        return "- (ninguno)".to_string();
+    }
+    items
+        .iter()
+        .map(|item| format!("- {item}"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 pub fn format_clock(seconds: i64) -> String {
@@ -1428,6 +1599,41 @@ mod tests {
             .unwrap();
         app.open_learning_item().unwrap();
         assert_eq!(app.screen, Screen::Exercise);
+    }
+
+    #[test]
+    fn code_lab_note_prompt_creates_a_linked_markdown_note() {
+        let (_temp, config) = fixture();
+        let mut app = App::new(config, Database::open_in_memory().unwrap()).unwrap();
+        let lesson_id = {
+            let mut service = CodeLabService::new(&mut app.database);
+            service.seed().unwrap();
+            service.lessons().unwrap()[0].id
+        };
+
+        app.start_code_lab_note_prompt(NoteItemType::Lesson, lesson_id)
+            .unwrap();
+        assert!(app.prompt.is_some());
+        app.prompt.as_mut().unwrap().input = "code-lab/mi-leccion.md".to_string();
+        app.prompt_submit().unwrap();
+
+        let path = app.config.vault.join("code-lab/mi-leccion.md");
+        let body = fs::read_to_string(&path).unwrap();
+        assert!(body.contains("# "));
+        assert!(body.contains("Contenido de la lección"));
+        assert_eq!(app.screen, Screen::Reader);
+        assert_eq!(
+            app.linked_note_path(NoteItemType::Lesson, lesson_id)
+                .unwrap()
+                .as_deref(),
+            Some("code-lab/mi-leccion.md")
+        );
+
+        // Una segunda petición abre la nota existente en vez de crear otra.
+        app.start_code_lab_note_prompt(NoteItemType::Lesson, lesson_id)
+            .unwrap();
+        assert!(app.prompt.is_none());
+        assert_eq!(app.screen, Screen::Reader);
     }
 
     #[test]

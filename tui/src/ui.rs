@@ -23,7 +23,7 @@ use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, 
 use ratatui::{Frame, Terminal};
 
 use crate::app::{App, ExerciseWorkspace, Screen, format_clock};
-use crate::code_lab::domain::{Difficulty, ExerciseStatus, ItemType};
+use crate::code_lab::domain::{Difficulty, ExerciseStatus, ItemType, NoteItemType};
 use crate::code_lab::ui::editor::CodeEditor;
 use crate::config::Config;
 use crate::domain::{
@@ -258,6 +258,10 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
                     editor.set_code(&solution);
                 }
             }
+            KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let id = app.code_lab.workspace.as_ref().unwrap().exercise.id;
+                app.start_code_lab_note_prompt(NoteItemType::Exercise, id)?;
+            }
             KeyCode::Esc => app.back()?,
             _ => {}
         }
@@ -274,6 +278,12 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
             KeyCode::PageDown => app.scroll_lesson_content(6),
             KeyCode::PageUp => app.scroll_lesson_content(-6),
             KeyCode::Enter => app.submit_lesson_quiz()?,
+            KeyCode::Char('n') => {
+                if let Some(lesson) = &app.code_lab.lesson {
+                    let id = lesson.view.detail.lesson.id;
+                    app.start_code_lab_note_prompt(NoteItemType::Lesson, id)?;
+                }
+            }
             KeyCode::Esc => app.back()?,
             _ => {}
         }
@@ -290,6 +300,12 @@ fn handle_key(app: &mut App, ui: &mut UiState, key: KeyEvent) -> anyhow::Result<
         match key.code {
             KeyCode::Char('j') | KeyCode::Down => app.move_concept_selection(1),
             KeyCode::Char('k') | KeyCode::Up => app.move_concept_selection(-1),
+            KeyCode::Char('n') => {
+                if let Some(concept) = app.code_lab.concepts.get(app.code_lab.concept_index) {
+                    let id = concept.id;
+                    app.start_code_lab_note_prompt(NoteItemType::Concept, id)?;
+                }
+            }
             KeyCode::Esc => app.back()?,
             _ => {}
         }
@@ -592,14 +608,16 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         Screen::Reader => {
             "j/k desplazar · s estado · f favorito · e editar · p pomodoro · Esc volver · q salir"
         }
-        Screen::Learn => "1-5 modo · j/k mover · Enter abrir · / buscar · i indexar · Esc volver",
+        Screen::Learn => "1-6 modo · j/k mover · Enter abrir · / buscar · i indexar · Esc volver",
         Screen::Review => "1-4 calificar · j/k mover · Enter abrir · Esc volver",
         Screen::Pomodoro => "Espacio iniciar/pausar · x reiniciar · > saltar · 1-8 pantallas",
         Screen::Stats => "j/k mover · i indexar · 1-8 pantallas · q salir",
         Screen::CodeLab => "1-3 dificultad · j/k elegir · Enter abrir · Esc volver · q salir",
-        Screen::Exercise => "Ctrl+S guardar · Ctrl+Enter ejecutar · Ctrl+V solución · Esc volver",
-        Screen::Lesson => "1-4 responder · j/k preguntas · Enter enviar · Esc volver",
-        Screen::ConceptReview => "1-4 calificar · j/k mover · Esc volver",
+        Screen::Exercise => {
+            "Ctrl+S guardar · Ctrl+Enter ejecutar · Ctrl+V solución · Ctrl+N nota · Esc volver"
+        }
+        Screen::Lesson => "1-4 responder · n nota · Enter enviar · Esc volver",
+        Screen::ConceptReview => "1-4 calificar · n nota · Esc volver",
     };
     frame.render_widget(
         Paragraph::new(Line::from(vec![
@@ -1312,9 +1330,9 @@ fn draw_concept_review(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) 
     };
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(5), Constraint::Min(3)])
+        .constraints([Constraint::Length(6), Constraint::Min(3)])
         .split(area);
-    let header = vec![
+    let mut header = vec![
         Line::from(vec![
             Span::styled(
                 concept.concept.clone(),
@@ -1342,6 +1360,9 @@ fn draw_concept_review(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) 
             Style::default().fg(theme.warning),
         )),
     ];
+    if let Some(line) = note_link_line(app, NoteItemType::Concept, concept.id, theme) {
+        header.push(line);
+    }
     frame.render_widget(
         Paragraph::new(header)
             .style(theme.base())
@@ -1412,7 +1433,7 @@ fn draw_lesson(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
                 .block(theme.block(&format!("lección · {}", lesson.view.detail.lesson.title))),
             columns[0],
         );
-        draw_quiz(frame, columns[1], lesson, theme);
+        draw_quiz(frame, columns[1], app, lesson, theme);
     } else {
         let rows = Layout::default()
             .direction(Direction::Vertical)
@@ -1425,11 +1446,34 @@ fn draw_lesson(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
                 .block(theme.block("contenido")),
             rows[0],
         );
-        draw_quiz(frame, rows[1], lesson, theme);
+        draw_quiz(frame, rows[1], app, lesson, theme);
     }
 }
 
-fn draw_quiz(frame: &mut Frame, area: Rect, lesson: &crate::app::LessonWorkspace, theme: &Theme) {
+fn note_link_line(
+    app: &App,
+    item_type: NoteItemType,
+    item_id: i64,
+    theme: &Theme,
+) -> Option<Line<'static>> {
+    app.linked_note_path(item_type, item_id)
+        .ok()
+        .flatten()
+        .map(|path| {
+            Line::from(vec![
+                Span::styled("nota: ", Style::default().fg(theme.muted)),
+                Span::styled(truncate(&path, 58), Style::default().fg(theme.link)),
+            ])
+        })
+}
+
+fn draw_quiz(
+    frame: &mut Frame,
+    area: Rect,
+    app: &App,
+    lesson: &crate::app::LessonWorkspace,
+    theme: &Theme,
+) {
     let mut lines = Vec::new();
     lines.push(Line::from(Span::styled(
         truncate(&lesson.status, 60),
@@ -1471,6 +1515,14 @@ fn draw_quiz(frame: &mut Frame, area: Rect, lesson: &crate::app::LessonWorkspace
     if lesson.view.detail.questions.is_empty() {
         lines.push(Line::from("Esta lección no tiene cuestionario."));
     }
+    if let Some(line) = note_link_line(
+        app,
+        NoteItemType::Lesson,
+        lesson.view.detail.lesson.id,
+        theme,
+    ) {
+        lines.push(line);
+    }
     frame.render_widget(
         Paragraph::new(lines)
             .wrap(Wrap { trim: false })
@@ -1497,14 +1549,14 @@ fn draw_exercise(frame: &mut Frame, area: Rect, app: &App, ui: &UiState, theme: 
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(38), Constraint::Percentage(62)])
             .split(area);
-        draw_exercise_detail(frame, columns[0], workspace, theme);
+        draw_exercise_detail(frame, columns[0], workspace, app, theme);
         draw_editor_panel(frame, columns[1], workspace, ui, theme);
     } else {
         let rows = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(8), Constraint::Min(5)])
             .split(area);
-        draw_exercise_detail(frame, rows[0], workspace, theme);
+        draw_exercise_detail(frame, rows[0], workspace, app, theme);
         draw_editor_panel(frame, rows[1], workspace, ui, theme);
     }
 }
@@ -1513,6 +1565,7 @@ fn draw_exercise_detail(
     frame: &mut Frame,
     area: Rect,
     workspace: &ExerciseWorkspace,
+    app: &App,
     theme: &Theme,
 ) {
     let exercise = &workspace.exercise;
@@ -1578,6 +1631,9 @@ fn draw_exercise_detail(
         truncate(&workspace.status, 60),
         Style::default().fg(theme.warning),
     )));
+    if let Some(line) = note_link_line(app, NoteItemType::Exercise, exercise.id, theme) {
+        lines.push(line);
+    }
 
     frame.render_widget(
         Paragraph::new(lines)
@@ -1857,7 +1913,7 @@ fn draw_prompt(frame: &mut Frame, area: Rect, prompt: &crate::app::Prompt, theme
 }
 
 fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
-    let popup = centered_rect(area.width.saturating_sub(16).min(90), 34, area);
+    let popup = centered_rect(area.width.saturating_sub(16).min(90), 35, area);
     frame.render_widget(Clear, popup);
     let lines = vec![
         Line::from(Span::styled(
@@ -1904,6 +1960,7 @@ fn draw_help(frame: &mut Frame, area: Rect, theme: &Theme) {
         Line::from("  1-4        responder en una lección"),
         Line::from("  Enter      enviar el cuestionario"),
         Line::from("  8          repasar conceptos"),
+        Line::from("  n / Ctrl+N crear nota enlazada en el vault"),
         Line::from(""),
         Line::from(Span::styled(
             "  ? o Esc para cerrar la ayuda",
@@ -2131,6 +2188,48 @@ mod tests {
         let rendered = render(110, 32, &app, &ui);
         assert!(rendered.contains("cuestionario"));
         assert!(rendered.contains(&truncate(&prompt, 60)));
+    }
+
+    #[test]
+    fn note_shortcuts_open_the_linked_note_prompt() {
+        let (_temp, mut app) = fixture();
+        app.refresh_code_lab().unwrap();
+        let mut ui = UiState::default();
+
+        app.open_code_lab_screen().unwrap();
+        app.open_selected_exercise().unwrap();
+        ui.sync_editor(&app, Theme::gruvbox_dark());
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('n'), KeyModifiers::CONTROL),
+        )
+        .unwrap();
+        assert!(app.prompt.is_some());
+        app.prompt_cancel();
+
+        let lesson_id = crate::code_lab::app::CodeLabService::new(&mut app.database)
+            .lessons()
+            .unwrap()[0]
+            .id;
+        app.open_lesson(lesson_id).unwrap();
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('n'), KeyModifiers::empty()),
+        )
+        .unwrap();
+        assert!(app.prompt.is_some());
+        app.prompt_cancel();
+
+        app.set_screen(Screen::ConceptReview).unwrap();
+        handle_key(
+            &mut app,
+            &mut ui,
+            key(KeyCode::Char('n'), KeyModifiers::empty()),
+        )
+        .unwrap();
+        assert!(app.prompt.is_some());
     }
 
     #[test]

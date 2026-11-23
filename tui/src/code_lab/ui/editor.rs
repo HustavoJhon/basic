@@ -85,7 +85,8 @@ impl CodeEditor {
     pub fn is_reserved_shortcut(key: KeyEvent) -> bool {
         let save = key.code == KeyCode::Char('s') && key.modifiers.contains(KeyModifiers::CONTROL);
         let run = key.code == KeyCode::Enter && key.modifiers.contains(KeyModifiers::CONTROL);
-        save || run || key.code == KeyCode::Esc
+        let note = key.code == KeyCode::Char('n') && key.modifiers.contains(KeyModifiers::CONTROL);
+        save || run || note || key.code == KeyCode::Esc
     }
 
     /// Procesa una tecla. Devuelve `true` cuando pertenece al editor; los
