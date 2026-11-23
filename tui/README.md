@@ -2,7 +2,7 @@
 
 Sistema personal de conocimiento y aprendizaje para la terminal.
 
-> Estado: **F2–F20 implementadas**. Incluye TUI Gruvbox, indexado incremental,
+> Estado: **F2–F21 implementadas**. Incluye TUI Gruvbox, indexado incremental,
 > explorador y búsqueda, visor Markdown, creación de notas, Learning Mode,
 > Pomodoro, estadísticas con heatmap y repaso tipo SM-2. Code Lab añade el
 > esquema v5, el dominio del lenguaje, el editor TUI reutilizable, el runner
@@ -104,6 +104,7 @@ coincidencia difusa y ordena por relevancia.
 | `Enter` (lección) | enviar el cuestionario |
 | `1`–`4` (conceptos) | calificar el concepto actual |
 | `n` / `Ctrl+N` | crear o abrir la nota enlazada del elemento |
+| `c` (lector) | volver al origen de Code Lab de la nota |
 | `?` | ayuda contextual |
 | `q` / `Esc` | salir / volver |
 
@@ -162,6 +163,11 @@ lector en vez de crear otra. Ninguna nota existente se sobrescribe.
 `basic code-lab notes [--json]` lista los enlaces. El archivo Markdown sigue
 siendo la fuente de verdad: borrar la nota no borra el enlace, y borrar el
 enlace no toca el archivo.
+
+Las notas incluyen un marcador oculto con su origen. En el lector, `c` vuelve a
+la lección, al ejercicio o al concepto del que salió la nota; el marcador no se
+dibuja. Las plantillas son declarativas por lenguaje: C# usa bloques `csharp` y
+una genérica cubre cualquier lenguaje futuro.
 
 ### Códigos de salida
 
