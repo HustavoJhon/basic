@@ -52,6 +52,8 @@ pub enum CodeLabCommand {
     Seed(CodeLabSeedArgs),
     /// Lista las lecciones disponibles
     Lessons(CodeLabLessonsArgs),
+    /// Muestra el progreso agregado de lecciones y ejercicios
+    Stats(CodeLabStatsArgs),
 }
 
 #[derive(Debug, Args)]
@@ -64,6 +66,13 @@ pub struct CodeLabSeedArgs {
 #[derive(Debug, Args)]
 pub struct CodeLabLessonsArgs {
     /// Emite las lecciones como JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct CodeLabStatsArgs {
+    /// Emite el resumen como JSON
     #[arg(long)]
     pub json: bool,
 }

@@ -10,9 +10,9 @@ use clap::{CommandFactory, Parser};
 use serde::Serialize;
 
 use basic::cli::{
-    Cli, CodeLabCommand, CodeLabLessonsArgs, CodeLabSeedArgs, Command, ConfigCommand,
-    ConfigInitArgs, ConfigShowArgs, DoctorArgs, IndexArgs, NewNoteArgs, PathsArgs, ReviewArgs,
-    SearchArgs, StatsArgs,
+    Cli, CodeLabCommand, CodeLabLessonsArgs, CodeLabSeedArgs, CodeLabStatsArgs, Command,
+    ConfigCommand, ConfigInitArgs, ConfigShowArgs, DoctorArgs, IndexArgs, NewNoteArgs, PathsArgs,
+    ReviewArgs, SearchArgs, StatsArgs,
 };
 use basic::code_lab::app::CodeLabService;
 use basic::config::{Config, LoadedConfig};
@@ -66,6 +66,7 @@ fn run() -> anyhow::Result<u8> {
         Some(Command::CodeLab(args)) => match args.command {
             CodeLabCommand::Seed(args) => run_code_lab_seed(&paths, args),
             CodeLabCommand::Lessons(args) => run_code_lab_lessons(&paths, args),
+            CodeLabCommand::Stats(args) => run_code_lab_stats(&paths, args),
         },
         None => {
             // En una terminal interactiva el comando principal es la TUI; en
@@ -313,6 +314,32 @@ fn run_code_lab_lessons(paths: &Paths, args: CodeLabLessonsArgs) -> anyhow::Resu
             println!("     {}", lesson.summary);
         }
         println!("\n{} lección(es) disponibles.", lessons.len());
+    }
+    Ok(0)
+}
+
+fn run_code_lab_stats(paths: &Paths, args: CodeLabStatsArgs) -> anyhow::Result<u8> {
+    let loaded = load_valid(paths)?;
+    let mut database = Database::open(&loaded.config.database)
+        .with_context(|| format!("no se pudo abrir {}", loaded.config.database.display()))?;
+    let mut service = CodeLabService::new(&mut database);
+    service.seed()?;
+    let stats = service.stats()?;
+
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&stats)?);
+    } else {
+        println!("Lecciones completadas {}", stats.lessons_completed);
+        println!("Lecciones totales     {}", stats.lessons);
+        println!("Ejercicios resueltos  {}", stats.exercises_solved);
+        println!("Ejercicios totales    {}", stats.exercises);
+        println!("Intentos superados    {}", stats.attempts_passed);
+        println!("Intentos totales      {}", stats.attempts);
+        println!("Conceptos a repasar   {}", stats.concepts_due);
+        println!(
+            "Tiempo de Code Lab    {}",
+            basic::domain::format_duration(stats.seconds_spent)
+        );
     }
     Ok(0)
 }

@@ -450,6 +450,18 @@ fn code_lab_seed_and_lessons_workflow() {
     assert_eq!(list.as_array().unwrap().len(), 5);
     assert_eq!(list[0]["slug"], "primer-programa");
     assert_eq!(list[4]["slug"], "entradas-y-pruebas");
+
+    let stats = run({
+        let mut command = basic(temp.path());
+        command.args(["code-lab", "stats", "--json"]);
+        command
+    });
+    assert!(stats.status.success(), "stderr: {}", stderr(&stats));
+    let summary = json(&stats);
+    assert_eq!(summary["lessons"], 5);
+    assert_eq!(summary["exercises"], 6);
+    assert_eq!(summary["attempts"], 0);
+    assert!(summary["concepts_due"].as_i64().unwrap() > 0);
 }
 
 #[test]

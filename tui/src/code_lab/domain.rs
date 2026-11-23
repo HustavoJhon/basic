@@ -602,7 +602,7 @@ pub struct CodeLabItem {
 }
 
 /// Resumen de Code Lab para dashboard y estadísticas.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct CodeLabStats {
     pub languages: i32,
     pub paths: i32,
